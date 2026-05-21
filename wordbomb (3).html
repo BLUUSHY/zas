@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WordBomb</title>
+<style>
+*{box-sizing:border-box}
+body{
+    margin:0;font-family:Arial,Helvetica,sans-serif;
+    background:linear-gradient(135deg,#0f172a,#1e293b);
+    color:#fff;min-height:100vh;display:flex;justify-content:center;
+    align-items:center;padding:16px;overflow-x:hidden;
+}
+.game{
+    width:960px;max-width:100%;background:rgba(255,255,255,0.06);
+    border:1px solid rgba(255,255,255,0.1);border-radius:24px;
+    padding:24px;backdrop-filter:blur(10px);
+    box-shadow:0 20px 50px rgba(0,0,0,0.5);
+}
+h1{
+    text-align:center;margin:0 0 4px;font-size:3rem;letter-spacing:4px;
+    background:linear-gradient(90deg,#38bdf8,#a78bfa,#f472b6);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.sub{text-align:center;opacity:0.6;margin-bottom:18px;font-size:0.9rem}
+.top{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:18px}
+.card{background:rgba(255,255,255,0.08);padding:12px;border-radius:14px;text-align:center}
+.label{opacity:0.7;font-size:0.75rem;text-transform:uppercase;letter-spacing:1px}
+.value{font-size:1.4rem;font-weight:bold;margin-top:4px}
+.center{display:flex;flex-direction:column;align-items:center;gap:16px}
+.character-wrap{position:relative;width:170px;height:170px;display:flex;justify-content:center;align-items:center}
+.character{
+    width:110px;height:110px;border-radius:50%;
+    background:linear-gradient(135deg,#38bdf8,#2563eb);
+    display:flex;justify-content:center;align-items:center;
+    font-size:3rem;position:relative;z-index:2;
+    box-shadow:0 0 35px rgba(59,130,246,0.7);
+    transition:transform .15s;
+}
+.character.hit{animation:shake .35s}
+@keyframes shake{
+    0%,100%{transform:translateX(0)}
+    25%{transform:translateX(-10px) rotate(-8deg)}
+    75%{transform:translateX(10px) rotate(8deg)}
+}
+.fire{
+    position:absolute;width:185px;height:185px;border-radius:50%;
+    opacity:0;transition:.3s;filter:blur(5px);
+    background:radial-gradient(circle,
+        rgba(255,255,255,0) 40%,rgba(255,180,0,0.9) 60%,
+        rgba(255,80,0,0.8) 72%,rgba(255,255,0,0.25) 90%,
+        rgba(255,255,255,0) 100%);
+    animation:fire .7s infinite alternate;
+}
+.fire.active{opacity:1}
+@keyframes fire{
+    from{transform:scale(0.95) rotate(-2deg)}
+    to{transform:scale(1.08) rotate(2deg)}
+}
+.combo{
+    font-size:4rem;font-weight:bold;letter-spacing:6px;
+    background:rgba(255,255,255,0.08);padding:14px 32px;
+    border-radius:20px;min-width:220px;text-align:center;
+    text-transform:uppercase;
+}
+.combo.rare{background:linear-gradient(135deg,#7c3aed,#db2777);box-shadow:0 0 30px rgba(168,85,247,.6)}
+.timer-wrap{
+    width:100%;max-width:540px;height:22px;border-radius:999px;
+    overflow:hidden;background:rgba(255,255,255,0.1);position:relative;
+}
+.timer{
+    height:100%;background:linear-gradient(90deg,#22c55e,#facc15,#ef4444);
+    transition:width .05s linear;
+}
+.freeze .timer{background:linear-gradient(90deg,#67e8f9,#3b82f6)!important}
+input{
+    width:100%;max-width:540px;padding:16px;border:none;outline:none;
+    border-radius:16px;font-size:1.2rem;text-align:center;
+    color:#0f172a;font-weight:bold;letter-spacing:1px;
+}
+input:disabled{opacity:.5}
+.buttons{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+button,select{
+    border:none;border-radius:12px;padding:11px 16px;
+    font-size:0.95rem;font-family:inherit;
+}
+button{background:#2563eb;color:#fff;font-weight:bold;cursor:pointer;transition:.15s}
+button:hover:not(:disabled){background:#1d4ed8;transform:translateY(-1px)}
+button:disabled{opacity:.4;cursor:not-allowed}
+button.ghost{background:rgba(255,255,255,0.1)}
+button.danger{background:#dc2626}
+button.shop{background:linear-gradient(135deg,#9333ea,#db2777)}
+.message{min-height:24px;font-weight:bold;text-align:center}
+.message.good{color:#4ade80}
+.message.bad{color:#f87171}
+.message.info{color:#fde047}
+.alphabet{
+    display:flex;flex-wrap:wrap;gap:4px;justify-content:center;
+    max-width:540px;margin:6px auto 0;
+}
+.letter{
+    width:24px;height:24px;border-radius:6px;
+    background:rgba(255,255,255,0.08);
+    display:flex;align-items:center;justify-content:center;
+    font-size:0.75rem;font-weight:bold;opacity:.45;
+}
+.letter.used{background:#22c55e;color:#0f172a;opacity:1}
+.bottom{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}
+@media(max-width:760px){.bottom{grid-template-columns:1fr}}
+.panel{
+    background:rgba(255,255,255,0.05);border-radius:16px;padding:12px;
+}
+.panel h3{margin:0 0 8px;font-size:0.95rem;opacity:.85;letter-spacing:1px;text-transform:uppercase}
+.used-list{max-height:130px;overflow-y:auto;line-height:1.7;font-size:.9rem}
+.used-list span{display:inline-block;padding:1px 6px;margin:1px;background:rgba(255,255,255,.08);border-radius:6px}
+.used-list span.long{background:rgba(74,222,128,.25);color:#86efac}
+.shop-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.shop-item{
+    background:rgba(255,255,255,.07);border-radius:10px;padding:8px;
+    text-align:center;font-size:.8rem;cursor:pointer;transition:.15s;
+    border:1px solid transparent;
+}
+.shop-item:hover{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.2)}
+.shop-item .ic{font-size:1.5rem}
+.shop-item .nm{font-weight:bold;margin-top:2px}
+.shop-item .cost{opacity:.7;font-size:.75rem;margin-top:2px}
+.shop-item .owned{color:#fde047;font-size:.7rem;margin-top:2px}
+.loading{color:#facc15;text-align:center;font-size:.85rem}
+.tabs{display:flex;gap:6px;margin-bottom:8px}
+.tabs button{padding:6px 12px;font-size:.8rem;background:rgba(255,255,255,.08)}
+.tabs button.active{background:#2563eb}
+.diff-pill{
+    display:inline-block;padding:2px 10px;border-radius:999px;
+    font-size:.7rem;font-weight:bold;text-transform:uppercase;letter-spacing:1px;
+}
+.diff-easy{background:#16a34a}
+.diff-med{background:#ca8a04}
+.diff-hard{background:#dc2626}
+.toast{
+    position:fixed;top:20px;left:50%;transform:translateX(-50%);
+    background:rgba(0,0,0,.8);padding:10px 20px;border-radius:10px;
+    font-weight:bold;z-index:100;opacity:0;transition:.3s;pointer-events:none;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(10px)}
+.floater{
+    position:absolute;font-weight:bold;font-size:1.5rem;color:#4ade80;
+    pointer-events:none;animation:floatUp 1s forwards;
+}
+@keyframes floatUp{
+    0%{opacity:1;transform:translateY(0)}
+    100%{opacity:0;transform:translateY(-60px)}
+}
+@media(max-width:760px){
+    .top{grid-template-columns:repeat(3,1fr)}
+    .combo{font-size:2.8rem;padding:12px 20px;min-width:180px}
+    h1{font-size:2.2rem}
+}
+</style>
+</head>
+<body>
+
+<div class="game">
+    <h1>WORDBOMB</h1>
+    <div class="sub" id="diffPill"></div>
+
+    <div class="top">
+        <div class="card"><div class="label">Coins</div><div class="value" id="coins">0</div></div>
+        <div class="card"><div class="label">Score</div><div class="value" id="score">0</div></div>
+        <div class="card"><div class="label">6+ Streak</div><div class="value" id="streak">0</div></div>
+        <div class="card"><div class="label">Multiplier</div><div class="value" id="multiplier">1x</div></div>
+        <div class="card"><div class="label">Lives</div><div class="value" id="hearts">❤️❤️❤️</div></div>
+        <div class="card"><div class="label">Best</div><div class="value" id="best">0</div></div>
+        <div class="card" style="grid-column:span 3"><div class="label">Level (lifetime words)</div><div class="value" id="levelVal">Lv 1</div></div>
+        <div class="card" style="grid-column:span 3"><div class="label" id="chainLabel">Next letter</div><div class="value" id="chainVal">—</div></div>
+    </div>
+
+    <div class="center">
+        <div class="character-wrap">
+            <div class="fire" id="fire"></div>
+            <div class="character" id="character">😎</div>
+        </div>
+
+        <div class="combo" id="combo">ing</div>
+
+        <div class="timer-wrap" id="timerWrap">
+            <div class="timer" id="timer"></div>
+        </div>
+
+        <input id="wordInput" type="text" placeholder="Type a word and press Enter" autocomplete="off" autocapitalize="off" spellcheck="false" disabled>
+
+        <div class="alphabet" id="alphabet"></div>
+
+        <div class="message" id="message"></div>
+
+        <div class="buttons">
+            <select id="difficulty">
+                <option value="easy">Easy</option>
+                <option value="medium" selected>Medium</option>
+                <option value="hard">Hard</option>
+                <option value="insane">Insane</option>
+            </select>
+            <select id="modeSelect" title="Game mode">
+                <option value="classic" selected>🎯 Classic</option>
+                <option value="zen">🧘 Zen (no time loss)</option>
+                <option value="sudden">💀 Sudden Death (1 life)</option>
+                <option value="chain">🔗 Chain (start w/ last letter)</option>
+                <option value="daily">📅 Daily Challenge</option>
+            </select>
+            <select id="lifeSelect">
+                <option value="3">3 Lives</option>
+                <option value="5" selected>5 Lives</option>
+                <option value="7">7 Lives</option>
+                <option value="10">10 Lives</option>
+            </select>
+            <button id="startBtn">Start Game</button>
+            <button id="hintBtn" class="ghost" disabled>💡 Hint (10c)</button>
+            <button id="skipBtn" class="ghost" disabled>⏭ Skip (15c)</button>
+            <button id="freezeBtn" class="ghost" disabled>❄️ Freeze (20c)</button>
+            <button id="muteBtn" class="ghost">🔊</button>
+        </div>
+
+        <div class="loading" id="loading">Loading dictionary...</div>
+        <div style="text-align:center;margin-top:8px">
+            <input type="file" id="dictFile" accept=".txt" style="display:none">
+            <button class="ghost" id="uploadDictBtn">📂 Upload dictionary.txt</button>
+            <button class="ghost" id="clearDictBtn">🗑 Clear cached dictionary</button>
+        </div>
+    </div>
+
+    <div class="bottom">
+        <div class="panel">
+            <div class="tabs">
+                <button class="active" data-tab="used">Used Words</button>
+                <button data-tab="stats">Stats</button>
+                <button data-tab="ach">🏅 Achievements</button>
+                <button data-tab="missed">😶 Missed</button>
+            </div>
+            <div id="tabUsed" class="used-list"></div>
+            <div id="tabStats" class="used-list" style="display:none"></div>
+            <div id="tabAch" class="used-list" style="display:none"></div>
+            <div id="tabMissed" class="used-list" style="display:none">Play a game to see words you could've played.</div>
+        </div>
+        <div class="panel">
+            <h3>🛒 Shop (permanent upgrades)</h3>
+            <div class="shop-grid" id="shopGrid"></div>
+            <div style="margin-top:8px;text-align:center">
+                <button class="danger" id="resetCoinsBtn">Reset Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ================= COMBOS BY DIFFICULTY =================
+ * Curated from common English bigrams/trigrams that WordBomb /
+ * BombParty-style games are known to use. Any cluster with zero
+ * matching words in your loaded dictionary is auto-filtered at runtime.
+ */
+const COMBO_POOLS = {
+    easy: [
+        // common 2-letter starts / pairs
+        "an","in","on","at","it","or","er","ar","en","ed","es","is","us","as","of","to",
+        "st","nd","rd","th","ng","ch","sh","ph","wh","ck","ll","ss","tt","ff","mm","nn","pp","rr",
+        "ea","ou","oo","ee","ai","ay","ow","oi","oy","ie","ei","ue","ui","au","aw","ew",
+        "nt","mp","nk","nc","ld","lt","lf","lp","lk","lm","rt","rd","rn","rl","rm","rp","rs","rk",
+        "tr","pr","gr","cr","fr","br","dr","pl","cl","bl","fl","gl","sl","sp","st","sc","sk","sm","sn","sw","tw",
+        // very common 3-letter
+        "ing","ion","ent","est","all","and","ate","ate","ore","one","out","ear","ear","ant","ick","ack"
+    ],
+    medium: [
+        // 2-letter (medium difficulty)
+        "ag","ap","ab","ad","af","am","ap","ar","as","ax","eb","ec","ef","eg","el","em","ep","ex",
+        "ib","ic","id","if","ig","im","ip","ir","ob","oc","od","of","og","om","op","os","ub","uc","ud","uf","ug","um","up",
+        "by","fy","ly","my","ny","ry","sy","ty","wy","zy",
+        "bo","co","do","fo","go","ho","jo","lo","mo","no","po","ro","so","to","vo","wo","yo","zo",
+        "ba","ca","da","fa","ga","ha","ja","ka","la","ma","na","pa","ra","sa","ta","va","wa","ya","za",
+        // 3-letter (medium)
+        "ain","ing","ion","ent","est","all","ous","ard","ate","ant","and","ash","air","ear","our","out",
+        "ove","ill","ick","ack","ang","ank","ame","ace","ice","ide","ine","ive","ore","oke","ump","unk",
+        "ung","eam","eat","oon","ool","oot","own","row","low","man","men","son","ter","tin","tar","tor",
+        "ble","cle","dle","gle","kle","ple","tle","zle",
+        "age","ake","ale","alk","alm","alt","amp","ane","ape","arm","arn","arp","art","ash","ask","ass",
+        "ast","awn","aze","eak","eal","ean","eap","ear","eck","eed","eek","eel","een","eep","eet",
+        "ell","elt","end","ent","ess","est","etc","ick","ile","ilk","ill","ime","imp","ind","ine","ing",
+        "ink","int","ipe","ire","irl","irm","irt","ish","isk","iss","ist","ite","ize",
+        "ock","ode","oft","oil","oin","old","ole","oll","olt","ome","ond","one","ong","onk","ood","oof",
+        "ook","ool","oom","oon","oop","oor","oot","ope","ord","ork","orm","orn","ort","ose","oss","ost","ote","out",
+        "owl","own","ube","uck","ude","ues","uff","uft","ugh","uld","ule","ull","ult","ume","ump","unc","und","une","ung","unk","unt","urn","urp","urt","use","ush","usk","ust","ute","uts",
+        // common consonant 3-clusters
+        "cha","shi","pho","str","spr","scr","spl","thr","pre","dis","sub","tri","com","con","per","for",
+        "res","rea","int","exp","imp","sta","sto","sur","und","mis","non","pro","pas","par","pen","ple",
+        "rep","sec","sel","sen","sho","sig","sim","sli","sma","sne","sol","spe","spi","spo","squ","sup","sus","syl","syn","sys",
+        "tab","tem","tex","tho","thu","tim","tol","tou","tra","tre","tri","tro","tru","try","tum","tur",
+        "una","unc","uni","upo","ura","urb","urg","urs","use","usu","uti","uto","vac","val","var","veg","vel","ven","ver","vic","vid","vie","vil","vin","vio","vir","vis","vit","voc","vol","wal","wan","war","was","wat","wav","wax","wea","wed","wee","wel","wen","wer","wes","wet","wha","whe","whi","who","why","wic","wid","wie","wig","wil","win","wip","wir","wis","wit","wiz","wol","wom","won","woo","wor","wou","wra","wre","wri","yea","yel","yes","you"
+    ],
+    hard: [
+        // tougher trigrams + less common bigrams
+        "ght","igh","aug","ough","augh","ought","ought","eigh","aigh",
+        "qua","que","qui","quo","squ",
+        "scr","spl","spr","str","thr","phr","sch","sph","shr","thw",
+        "tch","tsh","dge","ndle","mble","ckle","ddle","pple","ttle","stle","rkle","mple",
+        "mph","nch","rch","lth","rth","wth","pth","fth","xth",
+        "tion","sion","ment","ness","less","ful","able","ible","ize","ify","ate","ity",
+        "anti","auto","semi","ultra","over","under","fore","inter","trans",
+        "bio","geo","neo","oxy","pyr","syn","tel","zoo","ego","ohm",
+        "kn","gn","ps","pt","mn","wr","rh","xy","wy","zz","zh","jh","yx","xc"
+    ],
+    insane: [
+        // 3-4 letter clusters that are rare but solvable in a good dictionary
+        "rrh","yph","xio","zzl","wkw","jud","oxy","yrr","nxi","xen","xis","xer","xim","xon",
+        "phth","chth","sphr","thm","gnos","mnem","pneu","psyc","czar","dwa","dwe","dwi",
+        "ggl","ggle","kkl","ngst","ndst","ngth","rmth","mpth","lmth","fths",
+        "rkh","rkl","rkw","cqu","squ","tch","tzs","tsk","tzk","tzm",
+        "zyg","zym","zoa","zoo","ypt","yps","yrm","yrr","yss",
+        "wks","wkl","wkn","wsh","wth",
+        "thrh","scl","sphy","stl","sty","sve","swa","swo","syz","tzu","ucl","uds","uli","uph","ulm","uls","ulm","ump","umph"
+    ]
+};
+
+const DIFFICULTY = {
+    easy:    {time:7, minLen:3, scoreMult:1, label:"Easy",   pill:"diff-easy"},
+    medium:  {time:5, minLen:3, scoreMult:2, label:"Medium", pill:"diff-med"},
+    hard:    {time:4, minLen:4, scoreMult:3, label:"Hard",   pill:"diff-hard"},
+    insane:  {time:3, minLen:4, scoreMult:5, label:"Insane", pill:"diff-hard"}
+};
+
+/* ================= SHOP / UPGRADES ================= */
+const SHOP_ITEMS = [
+    {id:"hint",   ic:"💡", nm:"Hint Pack",      cost:25, max:99, desc:"+5 hints"},
+    {id:"skip",   ic:"⏭", nm:"Skip Pack",      cost:35, max:99, desc:"+5 skips"},
+    {id:"freeze", ic:"❄️", nm:"Freeze Pack",    cost:50, max:99, desc:"+3 freezes"},
+    {id:"life",   ic:"❤️", nm:"Extra Life",     cost:75, max:99, desc:"+1 starting life"},
+    {id:"slow",   ic:"🐢", nm:"Slow Timer",     cost:100,max:5,  desc:"+0.5s base time"},
+    {id:"mult",   ic:"⭐", nm:"Bonus Multi",     cost:150,max:5,  desc:"+0.5x base multi"}
+];
+
+/* ================= STATE ================= */
+const SAVE_KEY = "wordbombSave_v2";
+const DICT_KEY = "wordbombDict_v1";
+
+let save = loadSave();
+
+let dictionary = new Set();
+let dictionaryLoaded = false;
+let dictWordsArr = [];
+
+let currentCombo = "";
+let lives = 3;
+let longStreak = 0;
+let multiplier = 1;
+let round = 0;
+let score = 0;
+let chainCount = 0;
+let sessionUsedAssist = false;
+let lettersUsed = new Set();
+let inventory = {hint:0, skip:0, freeze:0};
+
+let timerDuration = 5;
+let currentTime = 5;
+let interval = null;
+let frozen = false;
+let muted = save.muted || false;
+let gameActive = false;
+let diff = "medium";
+let mode = "classic";
+let chainLetter = "";   // for chain mode: required first letter
+let lastCombo = "";     // for missed-words reveal
+let dailySeed = 0;
+
+/* ================= EL REFS ================= */
+const $ = id => document.getElementById(id);
+const comboEl = $("combo"), timerEl = $("timer"), timerWrapEl = $("timerWrap"),
+      inputEl = $("wordInput"), messageEl = $("message"), coinsEl = $("coins"),
+      scoreEl = $("score"), streakEl = $("streak"), multiplierEl = $("multiplier"),
+      heartsEl = $("hearts"), bestEl = $("best"), fireEl = $("fire"),
+      characterEl = $("character"), loadingEl = $("loading"),
+      alphabetEl = $("alphabet"), toastEl = $("toast"),
+      diffPill = $("diffPill"), shopGridEl = $("shopGrid"),
+      tabUsed = $("tabUsed"), tabStats = $("tabStats"),
+      tabAch = $("tabAch"), tabMissed = $("tabMissed"),
+      hintBtn = $("hintBtn"), skipBtn = $("skipBtn"), freezeBtn = $("freezeBtn"),
+      muteBtn = $("muteBtn"),
+      levelValEl = $("levelVal"), chainValEl = $("chainVal"), chainLabelEl = $("chainLabel");
+
+const usedWords = new Set();
+
+/* ================= SAVE ================= */
+function loadSave(){
+    try{
+        const raw = localStorage.getItem(SAVE_KEY);
+        if(raw) return JSON.parse(raw);
+    }catch(e){}
+    return {
+        coins:0, best:0, totalWords:0, gamesPlayed:0,
+        longestWord:"", upgrades:{}, muted:false,
+        achievements:{}, dailyBest:{}, bestByMode:{}
+    };
+}
+function persist(){
+    save.muted = muted;
+    localStorage.setItem(SAVE_KEY, JSON.stringify(save));
+}
+
+/* ================= DICTIONARY (cached in IndexedDB) ================= */
+const DICT_DB = "wordbombDictDB", DICT_STORE = "dict";
+function idb(){
+    return new Promise((res, rej)=>{
+        const r = indexedDB.open(DICT_DB, 1);
+        r.onupgradeneeded = ()=> r.result.createObjectStore(DICT_STORE);
+        r.onsuccess = ()=> res(r.result);
+        r.onerror = ()=> rej(r.error);
+    });
+}
+async function idbGet(key){
+    const db = await idb();
+    return new Promise((res, rej)=>{
+        const tx = db.transaction(DICT_STORE,"readonly").objectStore(DICT_STORE).get(key);
+        tx.onsuccess = ()=> res(tx.result);
+        tx.onerror = ()=> rej(tx.error);
+    });
+}
+async function idbSet(key, val){
+    const db = await idb();
+    return new Promise((res, rej)=>{
+        const tx = db.transaction(DICT_STORE,"readwrite").objectStore(DICT_STORE).put(val, key);
+        tx.onsuccess = ()=> res();
+        tx.onerror = ()=> rej(tx.error);
+    });
+}
+async function idbDel(key){
+    const db = await idb();
+    return new Promise((res, rej)=>{
+        const tx = db.transaction(DICT_STORE,"readwrite").objectStore(DICT_STORE).delete(key);
+        tx.onsuccess = ()=> res();
+        tx.onerror = ()=> rej(tx.error);
+    });
+}
+
+function parseDictText(text){
+    return text.replace(/\r/g,"\n").split(/\n+/)
+        .map(w=>w.trim().toLowerCase())
+        .filter(w=>w && /^[a-z]+$/.test(w));
+}
+function applyWords(words, source){
+    dictionary = new Set(words);
+    dictWordsArr = words;
+    dictionaryLoaded = true;
+    loadingEl.textContent = `Dictionary loaded from ${source} (${dictionary.size.toLocaleString()} words)`;
+}
+async function cacheWords(words){
+    try{ await idbSet(DICT_KEY, words); }
+    catch(e){
+        try{ localStorage.setItem(DICT_KEY, JSON.stringify(words)); }
+        catch(e2){ console.warn("Could not cache dictionary", e2); }
+    }
+}
+
+async function loadDictionary(){
+    try{
+        // 1. IndexedDB cache
+        const cached = await idbGet(DICT_KEY).catch(()=>null);
+        if(cached && Array.isArray(cached) && cached.length){
+            applyWords(cached, "cache");
+            return;
+        }
+        // 2. localStorage cache (legacy)
+        const ls = localStorage.getItem(DICT_KEY);
+        if(ls){
+            const arr = JSON.parse(ls);
+            applyWords(arr, "cache");
+            idbSet(DICT_KEY, arr).catch(()=>{}); // migrate
+            return;
+        }
+        // 3. Try fetching local dictionary.txt
+        loadingEl.textContent = "Loading dictionary.txt...";
+        const res = await fetch("./dictionary.txt");
+        if(!res.ok) throw new Error("dictionary.txt not found");
+        const words = parseDictText(await res.text());
+        applyWords(words, "dictionary.txt");
+        await cacheWords(words);
+        loadingEl.textContent = `Dictionary loaded (${dictionary.size.toLocaleString()} words) — cached forever`;
+    }catch(err){
+        console.error(err);
+        loadingEl.textContent = "⚠️ No dictionary found. Click \"📂 Upload dictionary.txt\" to load one (cached forever).";
+    }
+}
+
+async function handleDictUpload(file){
+    if(!file) return;
+    loadingEl.textContent = `Reading ${file.name}...`;
+    try{
+        const text = await file.text();
+        const words = parseDictText(text);
+        if(!words.length) throw new Error("No valid words found in file");
+        applyWords(words, file.name);
+        await cacheWords(words);
+        loadingEl.textContent = `Dictionary loaded from ${file.name} (${dictionary.size.toLocaleString()} words) — cached forever`;
+    }catch(err){
+        console.error(err);
+        loadingEl.textContent = "⚠️ Failed to load that file: " + err.message;
+    }
+}
+
+async function clearCachedDictionary(){
+    await idbDel(DICT_KEY).catch(()=>{});
+    localStorage.removeItem(DICT_KEY);
+    dictionary = new Set();
+    dictWordsArr = [];
+    dictionaryLoaded = false;
+    loadingEl.textContent = "Cached dictionary cleared. Upload a new one or reload to re-fetch dictionary.txt.";
+}
+
+/* ================= AUDIO ================= */
+let actx = null;
+function beep(freq=440, dur=0.1, type="sine", vol=0.1){
+    if(muted) return;
+    try{
+        if(!actx) actx = new (window.AudioContext||window.webkitAudioContext)();
+        const o = actx.createOscillator(), g = actx.createGain();
+        o.type=type; o.frequency.value=freq;
+        g.gain.value=vol;
+        o.connect(g); g.connect(actx.destination);
+        o.start();
+        g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime+dur);
+        o.stop(actx.currentTime+dur);
+    }catch(e){}
+}
+const sfx = {
+    good:   ()=>{ beep(660,.08,"triangle",.12); setTimeout(()=>beep(880,.1,"triangle",.12),60); },
+    great:  ()=>{ beep(523,.08,"square",.1); setTimeout(()=>beep(659,.08,"square",.1),70); setTimeout(()=>beep(784,.12,"square",.1),140); },
+    bad:    ()=>{ beep(180,.2,"sawtooth",.15); },
+    tick:   ()=>{ beep(1200,.03,"square",.05); },
+    boom:   ()=>{ beep(120,.4,"sawtooth",.2); setTimeout(()=>beep(80,.4,"sawtooth",.2),100); },
+    coin:   ()=>{ beep(988,.06,"triangle",.1); setTimeout(()=>beep(1318,.1,"triangle",.1),50); }
+};
+
+/* ================= UI HELPERS ================= */
+function toast(t){
+    toastEl.textContent = t;
+    toastEl.classList.add("show");
+    clearTimeout(toast._t);
+    toast._t = setTimeout(()=>toastEl.classList.remove("show"), 1800);
+}
+function msg(t, kind=""){
+    messageEl.textContent = t;
+    messageEl.className = "message " + kind;
+}
+function floatText(t,color){
+    const f = document.createElement("div");
+    f.className = "floater"; f.textContent = t;
+    f.style.color = color || "#4ade80";
+    f.style.left = "50%"; f.style.top = "0";
+    f.style.transform = "translateX(-50%)";
+    characterEl.parentElement.appendChild(f);
+    setTimeout(()=>f.remove(),1000);
+}
+function updateHearts(){ heartsEl.textContent = lives>0 ? "❤️".repeat(lives) : "💀"; }
+function updateMultiplier(){
+    const bonus = (save.upgrades.mult||0) * 0.5;
+    multiplier = 1 + bonus + Math.floor(longStreak/3);
+    multiplierEl.textContent = multiplier + "x";
+}
+function updateFire(){ fireEl.classList.toggle("active", longStreak>=3); }
+function updateCoins(){ coinsEl.textContent = save.coins; }
+function updateBest(){ bestEl.textContent = save.best; }
+function updateScore(){ scoreEl.textContent = score; }
+function updateAlphabet(){
+    alphabetEl.innerHTML = "";
+    for(let i=0;i<26;i++){
+        const c = String.fromCharCode(97+i);
+        const d = document.createElement("div");
+        d.className = "letter" + (lettersUsed.has(c)?" used":"");
+        d.textContent = c.toUpperCase();
+        alphabetEl.appendChild(d);
+    }
+}
+function updateDiffPill(){
+    const d = DIFFICULTY[diff];
+    const modeLabels = {classic:"Classic",zen:"Zen",sudden:"Sudden Death",chain:"Chain",daily:"Daily"};
+    diffPill.innerHTML = `<span class="diff-pill ${d.pill}">${d.label}</span> <span class="diff-pill" style="background:#334155">${modeLabels[mode]||mode}</span>`;
+}
+function updateLevel(){
+    const lv = 1 + Math.floor(Math.sqrt((save.totalWords||0)/5));
+    const next = 5 * (lv*lv);
+    levelValEl.textContent = `Lv ${lv} (${save.totalWords||0}/${next})`;
+}
+function updateChain(){
+    if(mode === "chain" && gameActive){
+        chainLabelEl.textContent = "Word must start with";
+        chainValEl.textContent = chainLetter ? chainLetter.toUpperCase() : "any";
+    } else {
+        chainLabelEl.textContent = "Mode";
+        chainValEl.textContent = ({classic:"🎯",zen:"🧘",sudden:"💀",chain:"🔗",daily:"📅"})[mode]||"—";
+    }
+}
+function updateInvBtns(){
+    hintBtn.textContent   = `💡 Hint (${inventory.hint>0?inventory.hint:"10c"})`;
+    skipBtn.textContent   = `⏭ Skip (${inventory.skip>0?inventory.skip:"15c"})`;
+    freezeBtn.textContent = `❄️ Freeze (${inventory.freeze>0?inventory.freeze:"20c"})`;
+    const on = gameActive && dictionaryLoaded;
+    hintBtn.disabled = !on; skipBtn.disabled = !on; freezeBtn.disabled = !on;
+}
+
+/* ================= SEEDED RNG (for Daily) ================= */
+function mulberry32(a){
+    return function(){
+        a |= 0; a = a + 0x6D2B79F5 | 0;
+        let t = a;
+        t = Math.imul(t ^ t >>> 15, t | 1);
+        t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+}
+let dailyRng = Math.random;
+function todayKey(){
+    const d = new Date();
+    return `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2,"0")}-${d.getDate().toString().padStart(2,"0")}`;
+}
+function seedFromString(s){
+    let h = 2166136261;
+    for(let i=0;i<s.length;i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return h >>> 0;
+}
+
+/* ================= ACHIEVEMENTS ================= */
+const ACHIEVEMENTS = [
+    {id:"first_word",   ic:"🎉", nm:"First Word",       desc:"Submit your first word", test:s=>s.totalWords>=1},
+    {id:"words_50",     ic:"📚", nm:"Bookworm",         desc:"50 lifetime words",      test:s=>s.totalWords>=50},
+    {id:"words_500",    ic:"🧠", nm:"Lexicon",          desc:"500 lifetime words",     test:s=>s.totalWords>=500},
+    {id:"long_8",       ic:"📏", nm:"Octogram",         desc:"Play an 8+ letter word", test:s=>(s.longestWord||"").length>=8},
+    {id:"long_12",      ic:"🦒", nm:"Marathon Word",    desc:"Play a 12+ letter word", test:s=>(s.longestWord||"").length>=12},
+    {id:"score_1000",   ic:"💯", nm:"Score 1k",         desc:"Score 1,000 in one run", test:s=>s.best>=1000},
+    {id:"score_5000",   ic:"🚀", nm:"Score 5k",         desc:"Score 5,000 in one run", test:s=>s.best>=5000},
+    {id:"alphabet",     ic:"🔤", nm:"Full Alphabet",    desc:"Use every letter in a run"},
+    {id:"streak_10",    ic:"🔥", nm:"Hot Streak",       desc:"10 long-word streak"},
+    {id:"insane_win",   ic:"😈", nm:"Insanity",         desc:"Score 500+ on Insane"},
+    {id:"chain_10",     ic:"🔗", nm:"Chain Reaction",   desc:"10 chain words in a row"},
+    {id:"daily",        ic:"📅", nm:"Daily Done",       desc:"Finish a daily challenge"},
+    {id:"rare_qzxj",    ic:"💎", nm:"Rare Earth",       desc:"Use a word with Q, Z, X, or J"},
+    {id:"no_hints",     ic:"🥷", nm:"Solo Mind",        desc:"Score 1k+ without hints/skips"}
+];
+function unlockAch(id){
+    save.achievements = save.achievements || {};
+    if(save.achievements[id]) return;
+    const a = ACHIEVEMENTS.find(x=>x.id===id);
+    if(!a) return;
+    save.achievements[id] = Date.now();
+    persist();
+    toast(`🏅 Achievement: ${a.nm}`);
+    sfx.great();
+    renderAchievements();
+}
+function checkAutoAchievements(){
+    for(const a of ACHIEVEMENTS) if(a.test && a.test(save)) unlockAch(a.id);
+}
+function renderAchievements(){
+    const got = save.achievements || {};
+    tabAch.innerHTML = ACHIEVEMENTS.map(a=>{
+        const owned = !!got[a.id];
+        return `<span class="${owned?'long':''}" style="display:block;padding:6px;margin:3px 0;${owned?'':'opacity:.5'}">${a.ic} <b>${a.nm}</b> — ${a.desc} ${owned?'✓':''}</span>`;
+    }).join("");
+}
+
+/* ================= COMBO PICKING (only ones that have answers) ================= */
+function pickCombo(){
+    const pool = COMBO_POOLS[diff];
+    const rng = mode === "daily" ? dailyRng : Math.random;
+    for(let tries=0; tries<30; tries++){
+        const c = pool[Math.floor(rng()*pool.length)];
+        if(hasAvailableWord(c)) { currentCombo = c; break; }
+        currentCombo = c;
+    }
+    lastCombo = currentCombo;
+    comboEl.textContent = currentCombo;
+    comboEl.classList.toggle("rare", currentCombo.length >= 4);
+}
+function hasAvailableWord(combo){
+    // sample a few words to confirm — fast enough for typical dicts
+    const min = DIFFICULTY[diff].minLen;
+    let count = 0;
+    for(const w of dictWordsArr){
+        if(w.length>=min && w.includes(combo) && !usedWords.has(w)){
+            count++;
+            if(count>=1) return true;
+        }
+    }
+    return false;
+}
+
+/* ================= TIMER / ROUND ================= */
+function updateTimerBar(){
+    const pct = Math.max(0,(currentTime/timerDuration)*100);
+    timerEl.style.width = pct + "%";
+}
+function startRound(){
+    round++;
+    const base = DIFFICULTY[diff].time + (save.upgrades.slow||0)*0.5 + (typeof pendingTimeBonus==="number"?pendingTimeBonus:0);
+    pendingTimeBonus = 0;
+    timerDuration = Math.max(1.5, base - round*0.04);
+    currentTime = timerDuration;
+    frozen = false;
+    timerWrapEl.classList.remove("freeze");
+    pickCombo();
+    inputEl.value = "";
+    inputEl.disabled = false;
+    inputEl.focus();
+    updateTimerBar();
+    updateChain();
+    clearInterval(interval);
+    let lastTick = -1;
+    interval = setInterval(()=>{
+        if(frozen) return;
+        if(mode === "zen") return;
+        currentTime -= 0.05;
+        updateTimerBar();
+        const whole = Math.ceil(currentTime);
+        if(whole<=3 && whole!==lastTick && whole>0){
+            sfx.tick(); lastTick = whole;
+        }
+        if(currentTime<=0){
+            clearInterval(interval);
+            loseLife("⏰ Time's up!");
+        }
+    },50);
+    if(mode === "zen"){ timerEl.style.width = "100%"; }
+}
+function revealMissedWords(){
+    if(!lastCombo) return;
+    const min = DIFFICULTY[diff].minLen;
+    const found = [];
+    for(const w of dictWordsArr){
+        if(w.length>=min && w.includes(lastCombo) && !usedWords.has(w)){
+            found.push(w);
+            if(found.length>=20) break;
+        }
+    }
+    tabMissed.innerHTML = found.length
+        ? `<div style="opacity:.7;margin-bottom:4px">Words you could've played for "<b>${lastCombo}</b>":</div>`
+          + found.map(w=>`<span class="${w.length>=6?'long':''}">${w}</span>`).join(" ")
+        : `No unused words found for "${lastCombo}".`;
+}
+function loseLife(reason){
+    clearInterval(interval);
+    if(mode === "sudden"){ msg(reason,"bad"); gameOver(); return; }
+    if(mode === "zen"){ msg(reason+" (Zen — no penalty)","info"); setTimeout(startRound,500); return; }
+    lives--;
+    updateHearts();
+    longStreak = 0;
+    chainCount = 0;
+    updateMultiplier();
+    updateFire();
+    streakEl.textContent = "0";
+    characterEl.classList.remove("hit");
+    void characterEl.offsetWidth;
+    characterEl.classList.add("hit");
+    sfx.bad();
+    msg(reason, "bad");
+    if(lives<=0){
+        gameOver();
+        return;
+    }
+    setTimeout(startRound, 700);
+}
+function gameOver(){
+    gameActive = false;
+    inputEl.disabled = true;
+    comboEl.textContent = "💥";
+    sfx.boom();
+    characterEl.textContent = "😵";
+    save.gamesPlayed = (save.gamesPlayed||0)+1;
+    const modeKey = mode === "daily" ? `daily:${todayKey()}:${diff}` : `${mode}:${diff}`;
+    save.bestByMode = save.bestByMode || {};
+    if(!save.bestByMode[modeKey] || score > save.bestByMode[modeKey]){
+        save.bestByMode[modeKey] = score;
+    }
+    if(mode === "daily"){
+        save.dailyBest = save.dailyBest || {};
+        const k = `${todayKey()}:${diff}`;
+        if(!save.dailyBest[k] || score > save.dailyBest[k]) save.dailyBest[k] = score;
+        unlockAch("daily");
+    }
+    if(score > (save.best||0)){
+        save.best = score;
+        toast("🏆 New best score!");
+    }
+    if(diff === "insane" && score >= 500) unlockAch("insane_win");
+    if(score >= 1000 && !sessionUsedAssist) unlockAch("no_hints");
+    persist();
+    updateBest();
+    checkAutoAchievements();
+    revealMissedWords();
+    msg(`Game Over — Final score ${score}. See "Missed" tab.`, "info");
+    updateInvBtns();
+    renderStats();
+    updateLevel();
+    updateChain();
+}
+
+/* ================= VALIDATION ================= */
+function isValidWord(word){
+    if(!dictionaryLoaded) return false;
+    return dictionary.has(word);
+}
+
+/* ================= SUBMIT ================= */
+function submitWord(){
+    if(!gameActive) return;
+    const word = inputEl.value.trim().toLowerCase();
+    if(!word) return;
+    const minLen = DIFFICULTY[diff].minLen;
+    if(word.length < minLen) return msg(`Min ${minLen} letters`, "bad");
+    if(!/^[a-z]+$/.test(word)) return msg("Letters only", "bad");
+    if(!word.includes(currentCombo)) return msg(`Must contain "${currentCombo}"`, "bad");
+    if(mode === "chain" && chainLetter && word[0] !== chainLetter)
+        return msg(`Must start with "${chainLetter.toUpperCase()}"`, "bad");
+    if(usedWords.has(word)) return msg("Already used this game", "bad");
+    if(!isValidWord(word)) return msg("Not in dictionary", "bad");
+
+    // valid!
+    usedWords.add(word);
+    save.totalWords = (save.totalWords||0)+1;
+    if(word.length > (save.longestWord||"").length) save.longestWord = word;
+
+    // letters tracking
+    let newLetters = 0;
+    for(const c of word) if(!lettersUsed.has(c)){ lettersUsed.add(c); newLetters++; }
+    updateAlphabet();
+
+    // alphabet bonus
+    if(lettersUsed.size === 26){
+        const bonus = 50;
+        save.coins += bonus;
+        lives = Math.min(lives+1, 99);
+        lettersUsed.clear(); updateAlphabet(); updateHearts();
+        toast(`🔤 Full alphabet! +${bonus} coins, +1 life`);
+        sfx.great();
+        unlockAch("alphabet");
+    }
+
+    // streak
+    if(word.length >= 6) longStreak++; else longStreak = 0;
+    if(longStreak >= 10) unlockAch("streak_10");
+    updateMultiplier(); updateFire();
+    streakEl.textContent = longStreak;
+
+    // chain tracking
+    if(mode === "chain"){
+        chainCount++;
+        chainLetter = word[word.length-1];
+        if(chainCount >= 10) unlockAch("chain_10");
+    }
+
+    // rare-letter bonus
+    let rareBonus = 0;
+    for(const c of word) if("qzxj".includes(c)) rareBonus += 3;
+    if(rareBonus > 0) unlockAch("rare_qzxj");
+
+    // long-word time bonus (carry to next round via timerDuration tweak)
+    let timeBonus = 0;
+    if(word.length > 6) timeBonus = (word.length - 6) * 0.3;
+
+    // scoring
+    const lenScore = word.length * word.length;
+    const gainedScore = Math.round(lenScore * multiplier * DIFFICULTY[diff].scoreMult);
+    const gainedCoins = Math.max(1, Math.floor(word.length/2)) * multiplier + rareBonus;
+    score += gainedScore;
+    save.coins += gainedCoins;
+    updateScore(); updateCoins(); persist();
+    checkAutoAchievements();
+    updateLevel();
+
+    floatText(`+${gainedScore}`, longStreak>=3 ? "#fbbf24" : "#4ade80");
+    if(word.length>=8) sfx.great(); else sfx.good();
+    sfx.coin();
+
+    let bits = [];
+    if(newLetters>0) bits.push(`+${newLetters} new letter${newLetters>1?"s":""}`);
+    if(rareBonus>0) bits.push(`💎 +${rareBonus} rare`);
+    if(timeBonus>0) bits.push(`⏱ +${timeBonus.toFixed(1)}s next`);
+    const extra = bits.length ? ` (${bits.join(", ")})` : "";
+    msg(`✓ +${gainedCoins} coins • +${gainedScore} pts${extra}`, "good");
+
+    renderUsed();
+    renderShop();
+    // apply time bonus by extending next-round base
+    if(timeBonus>0){
+        // bump duration on the upcoming round by temporarily inflating base
+        pendingTimeBonus = timeBonus;
+    }
+    startRound();
+}
+let pendingTimeBonus = 0;
+
+/* ================= POWER-UPS ================= */
+function useHint(){
+    if(!gameActive) return;
+    if(inventory.hint>0){ inventory.hint--; }
+    else if(save.coins >= 10){ save.coins -= 10; persist(); updateCoins(); }
+    else return toast("Need 10 coins");
+    sessionUsedAssist = true;
+    const minLen = DIFFICULTY[diff].minLen;
+    const candidates = [];
+    for(const w of dictWordsArr){
+        if(w.length>=minLen && w.includes(currentCombo) && !usedWords.has(w)){
+            candidates.push(w);
+            if(candidates.length>50) break;
+        }
+    }
+    if(!candidates.length) return toast("No words found 😱");
+    const pick = candidates[Math.floor(Math.random()*candidates.length)];
+    // reveal first 2 letters + length
+    const reveal = pick.slice(0,2) + "…" + ` (${pick.length} letters)`;
+    msg(`💡 Hint: ${reveal}`, "info");
+    updateInvBtns();
+}
+function useSkip(){
+    if(!gameActive) return;
+    if(inventory.skip>0){ inventory.skip--; }
+    else if(save.coins >= 15){ save.coins -= 15; persist(); updateCoins(); }
+    else return toast("Need 15 coins");
+    sessionUsedAssist = true;
+    toast("⏭ Skipped");
+    sfx.tick();
+    clearInterval(interval);
+    startRound();
+    updateInvBtns();
+}
+function useFreeze(){
+    if(!gameActive || frozen) return;
+    if(inventory.freeze>0){ inventory.freeze--; }
+    else if(save.coins >= 20){ save.coins -= 20; persist(); updateCoins(); }
+    else return toast("Need 20 coins");
+    frozen = true;
+    timerWrapEl.classList.add("freeze");
+    toast("❄️ Time frozen 3s");
+    sfx.tick();
+    setTimeout(()=>{
+        frozen = false;
+        timerWrapEl.classList.remove("freeze");
+    }, 3000);
+    updateInvBtns();
+}
+
+/* ================= SHOP ================= */
+function renderShop(){
+    save.upgrades = save.upgrades || {};
+    shopGridEl.innerHTML = "";
+    for(const it of SHOP_ITEMS){
+        const owned = save.upgrades[it.id] || 0;
+        const max = it.max;
+        const el = document.createElement("div");
+        el.className = "shop-item";
+        el.innerHTML = `
+            <div class="ic">${it.ic}</div>
+            <div class="nm">${it.nm}</div>
+            <div class="cost">${it.desc} — ${it.cost}c</div>
+            <div class="owned">${["hint","skip","freeze","life"].includes(it.id)?`owned: ${owned}`:`${owned}/${max}`}</div>
+        `;
+        el.onclick = ()=>buy(it);
+        shopGridEl.appendChild(el);
+    }
+    updateCoins();
+}
+function buy(it){
+    const owned = save.upgrades[it.id] || 0;
+    if(owned >= it.max) return toast("Max owned");
+    if(save.coins < it.cost) return toast("Not enough coins");
+    save.coins -= it.cost;
+    save.upgrades[it.id] = owned + 1;
+    if(it.id==="hint")   inventory.hint   += 5;
+    if(it.id==="skip")   inventory.skip   += 5;
+    if(it.id==="freeze") inventory.freeze += 3;
+    persist();
+    updateCoins(); renderShop(); updateInvBtns(); updateMultiplier();
+    toast(`Bought ${it.nm}`);
+    sfx.coin();
+}
+
+/* ================= USED / STATS ================= */
+function renderUsed(){
+    const arr = Array.from(usedWords).slice(-100).reverse();
+    tabUsed.innerHTML = arr.map(w=>`<span class="${w.length>=6?'long':''}">${w}</span>`).join(" ");
+}
+function renderStats(){
+    const dailyRows = Object.entries(save.dailyBest||{})
+        .sort((a,b)=>b[0].localeCompare(a[0])).slice(0,5)
+        .map(([k,v])=>`<div style="opacity:.8">📅 ${k}: <b>${v}</b></div>`).join("");
+    const modeRows = Object.entries(save.bestByMode||{})
+        .sort((a,b)=>b[1]-a[1]).slice(0,8)
+        .map(([k,v])=>`<div style="opacity:.8">🏆 ${k}: <b>${v}</b></div>`).join("");
+    tabStats.innerHTML = `
+        <div>Games played: <b>${save.gamesPlayed||0}</b></div>
+        <div>Total words: <b>${save.totalWords||0}</b></div>
+        <div>Longest: <b>${save.longestWord||"—"}</b></div>
+        <div>Best score: <b>${save.best||0}</b></div>
+        <div>Dictionary: <b>${dictionary.size.toLocaleString()} words</b></div>
+        <div>Achievements: <b>${Object.keys(save.achievements||{}).length}/${ACHIEVEMENTS.length}</b></div>
+        <hr style="opacity:.2">
+        <div style="opacity:.7;margin-bottom:4px">Best by mode:</div>${modeRows||"<div style='opacity:.5'>—</div>"}
+        <hr style="opacity:.2">
+        <div style="opacity:.7;margin-bottom:4px">Recent daily bests:</div>${dailyRows||"<div style='opacity:.5'>—</div>"}
+    `;
+}
+
+/* ================= EVENTS ================= */
+inputEl.addEventListener("keydown", e=>{
+    if(e.key === "Enter") submitWord();
+});
+$("startBtn").addEventListener("click", ()=>{
+    if(!dictionaryLoaded) return msg("Dictionary still loading...", "info");
+    diff = $("difficulty").value;
+    mode = $("modeSelect").value;
+    if(mode === "daily"){
+        dailyRng = mulberry32(seedFromString(todayKey()+":"+diff));
+        toast(`📅 Daily ${todayKey()} (${diff})`);
+    } else {
+        dailyRng = Math.random;
+    }
+    updateDiffPill();
+    const extraLives = save.upgrades.life || 0;
+    lives = (mode === "sudden") ? 1 : Number($("lifeSelect").value) + extraLives;
+    usedWords.clear();
+    renderUsed();
+    longStreak = 0; round = 0; score = 0;
+    chainCount = 0; chainLetter = "";
+    sessionUsedAssist = false;
+    pendingTimeBonus = 0;
+    inventory = {hint:save.upgrades.hint?inventory.hint:0, skip:inventory.skip, freeze:inventory.freeze};
+    lettersUsed.clear(); updateAlphabet();
+    streakEl.textContent = "0";
+    characterEl.textContent = "😎";
+    updateMultiplier(); updateFire(); updateHearts(); updateScore();
+    updateChain();
+    gameActive = true;
+    msg(mode==="zen"?"🧘 Zen mode — no penalty on misses.":"Go!", "good");
+    updateInvBtns();
+    startRound();
+});
+$("resetCoinsBtn").addEventListener("click", ()=>{
+    if(!confirm("Reset all coins, upgrades, achievements, and stats?")) return;
+    save = {coins:0,best:0,totalWords:0,gamesPlayed:0,longestWord:"",upgrades:{},muted:muted,achievements:{},dailyBest:{},bestByMode:{}};
+    persist();
+    inventory = {hint:0,skip:0,freeze:0};
+    updateCoins(); updateBest(); renderShop(); updateInvBtns(); renderStats(); renderAchievements(); updateLevel();
+    toast("Save reset");
+});
+hintBtn.onclick = useHint;
+skipBtn.onclick = useSkip;
+freezeBtn.onclick = useFreeze;
+muteBtn.onclick = ()=>{
+    muted = !muted; persist();
+    muteBtn.textContent = muted ? "🔇" : "🔊";
+};
+
+// tabs
+document.querySelectorAll(".tabs button").forEach(b=>{
+    b.onclick = ()=>{
+        document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("active"));
+        b.classList.add("active");
+        const t = b.dataset.tab;
+        tabUsed.style.display    = t==="used"?"block":"none";
+        tabStats.style.display   = t==="stats"?"block":"none";
+        tabAch.style.display     = t==="ach"?"block":"none";
+        tabMissed.style.display  = t==="missed"?"block":"none";
+        if(t==="stats") renderStats();
+        if(t==="ach") renderAchievements();
+    };
+});
+
+// keyboard shortcuts
+document.addEventListener("keydown", e=>{
+    if(e.target === inputEl) return;
+    if(e.key === "h") useHint();
+    if(e.key === "s" && e.ctrlKey) { e.preventDefault(); useSkip(); }
+    if(e.key === "f") useFreeze();
+});
+
+$("modeSelect").addEventListener("change", ()=>{
+    mode = $("modeSelect").value;
+    updateDiffPill();
+    updateChain();
+});
+
+/* ================= INIT ================= */
+updateCoins(); updateBest(); updateHearts(); updateMultiplier();
+updateAlphabet(); updateDiffPill(); renderShop(); renderStats();
+renderAchievements(); updateLevel(); updateChain();
+muteBtn.textContent = muted ? "🔇" : "🔊";
+$("uploadDictBtn").onclick = ()=> $("dictFile").click();
+$("dictFile").onchange = (e)=> handleDictUpload(e.target.files[0]);
+$("clearDictBtn").onclick = clearCachedDictionary;
+loadDictionary();
+</script>
+
+</body>
+</html>
