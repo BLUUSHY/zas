@@ -1,0 +1,1422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WordBomb 💣</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg0:#080c14;--bg1:#0f172a;--bg2:#1e293b;--bg3:#293548;
+  --blue:#3b82f6;--blue2:#60a5fa;--purple:#8b5cf6;--pink:#ec4899;
+  --green:#22c55e;--yellow:#eab308;--red:#ef4444;--cyan:#06b6d4;
+  --text:#f1f5f9;--text2:#94a3b8;--text3:#475569;
+  --radius:16px;--radius-sm:10px;
+}
+html,body{height:100%;min-height:100vh}
+body{font-family:'Inter',sans-serif;background:var(--bg0);color:var(--text);display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:16px 12px 32px;overflow-x:hidden}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--bg3);border-radius:99px}
+
+/* STARS */
+#stars{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.star{position:absolute;border-radius:50%;background:#fff;animation:twinkle var(--d,3s) infinite alternate var(--del,0s)}
+@keyframes twinkle{0%{opacity:.1;transform:scale(1)}100%{opacity:.7;transform:scale(1.4)}}
+
+/* CONFETTI */
+.confetti-piece{position:fixed;width:8px;height:8px;top:-10px;pointer-events:none;z-index:999;animation:confettiFall var(--cf-dur,2s) var(--cf-del,0s) forwards}
+@keyframes confettiFall{0%{transform:translateX(0) rotate(0deg);opacity:1}100%{transform:translateX(var(--cf-x,0px)) translateY(100vh) rotate(720deg);opacity:0}}
+
+.game{position:relative;z-index:1;width:100%;max-width:1060px;display:flex;flex-direction:column;gap:16px}
+
+/* HEADER */
+.header{text-align:center;padding:8px 0}
+h1{font-family:'Space Grotesk',sans-serif;font-size:clamp(2.2rem,6vw,3.8rem);font-weight:800;letter-spacing:6px;background:linear-gradient(135deg,#38bdf8 0%,#818cf8 40%,#f472b6 80%,#fb923c 100%);-webkit-background-clip:text;background-clip:text;color:transparent;line-height:1.1}
+.subtitle{color:var(--text2);font-size:.85rem;margin-top:4px;letter-spacing:1px}
+.header-meta{display:flex;gap:12px;justify-content:center;align-items:center;margin-top:8px;flex-wrap:wrap}
+.daily-streak-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:99px;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.25);font-size:.78rem;font-weight:700;color:#fbbf24}
+.version-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.25);font-size:.68rem;color:#818cf8}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+.stat-card{background:linear-gradient(145deg,rgba(255,255,255,.06),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.08);border-radius:var(--radius);padding:10px 8px;text-align:center;position:relative;overflow:hidden;transition:border-color .3s}
+.stat-label{font-size:.63rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-weight:600}
+.stat-value{font-size:1.3rem;font-weight:800;margin-top:3px;line-height:1}
+.stat-card.wide{grid-column:span 3}
+.coins .stat-value{color:#fbbf24}.score .stat-value{color:#60a5fa}
+.streak .stat-value{color:#f97316}.mult .stat-value{color:#a78bfa}
+.stat-card.levelup-flash{animation:levelFlash .6s}
+@keyframes levelFlash{0%,100%{border-color:rgba(255,255,255,.08)}30%,70%{border-color:#fbbf24;box-shadow:0 0 20px rgba(251,191,36,.4)}}
+
+/* LEVEL BAR */
+.level-bar-outer{width:100%;height:4px;border-radius:99px;background:rgba(255,255,255,.06);margin-top:5px;overflow:hidden}
+.level-bar-inner{height:100%;border-radius:99px;background:linear-gradient(90deg,#fbbf24,#f97316);transition:width .4s ease}
+
+/* DIFF PILLS */
+.diff-row{display:flex;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap}
+.pill{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px}
+.pill-easy{background:rgba(22,163,74,.25);color:#4ade80;border:1px solid rgba(34,197,94,.3)}
+.pill-med{background:rgba(202,138,4,.25);color:#fbbf24;border:1px solid rgba(234,179,8,.3)}
+.pill-hard{background:rgba(220,38,38,.25);color:#f87171;border:1px solid rgba(239,68,68,.3)}
+.pill-insane{background:rgba(139,92,246,.25);color:#c4b5fd;border:1px solid rgba(168,85,247,.3)}
+.pill-mode{background:rgba(100,116,139,.25);color:#94a3b8;border:1px solid rgba(100,116,139,.3)}
+
+/* ARENA */
+.arena{background:linear-gradient(160deg,rgba(255,255,255,.05),rgba(255,255,255,.01));border:1px solid rgba(255,255,255,.09);border-radius:24px;padding:24px 20px;display:flex;flex-direction:column;align-items:center;gap:14px;position:relative;overflow:hidden}
+.arena::before{content:'';position:absolute;top:-80px;left:50%;transform:translateX(-50%);width:400px;height:200px;background:radial-gradient(ellipse,rgba(99,102,241,.12),transparent 70%);pointer-events:none}
+
+/* VS SECTION */
+.vs-section{display:flex;align-items:center;gap:20px;width:100%}
+.vs-player-side,.vs-ai-side{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px}
+.vs-divider{font-family:'Space Grotesk',sans-serif;font-size:1.6rem;font-weight:800;color:var(--text3);flex-shrink:0}
+.vs-name{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3)}
+.vs-hp-bar{width:100%;height:8px;background:rgba(255,255,255,.08);border-radius:99px;overflow:hidden}
+.vs-hp-fill{height:100%;border-radius:99px;transition:width .5s ease}
+.vs-hp-fill.player{background:linear-gradient(90deg,#22c55e,#10b981)}
+.vs-hp-fill.ai{background:linear-gradient(90deg,#ef4444,#f97316)}
+.vs-hp-text{font-size:.7rem;font-weight:700;color:var(--text2)}
+.ai-thinking{font-size:.68rem;color:#60a5fa;font-style:italic;height:14px;transition:opacity .2s}
+
+/* CHARACTER */
+.char-wrap{position:relative;width:140px;height:140px;display:flex;align-items:center;justify-content:center}
+.char-ring{position:absolute;inset:0;border-radius:50%;border:2px solid transparent;background:linear-gradient(var(--bg0),var(--bg0)) padding-box,linear-gradient(135deg,#38bdf8,#818cf8,#f472b6) border-box;animation:spin 8s linear infinite;opacity:.5}
+@keyframes spin{to{transform:rotate(360deg)}}
+.char-glow{position:absolute;inset:-10px;border-radius:50%;background:radial-gradient(circle,rgba(99,102,241,.4),transparent 70%);opacity:0;transition:opacity .4s}
+.char-glow.active{opacity:1}
+.char-fire{position:absolute;width:135px;height:135px;border-radius:50%;opacity:0;transition:opacity .3s;background:radial-gradient(circle,transparent 30%,rgba(255,160,0,.7) 55%,rgba(255,60,0,.6) 70%,transparent 90%);animation:flicker .6s infinite alternate;filter:blur(4px)}
+@keyframes flicker{from{transform:scale(.93) rotate(-3deg)}to{transform:scale(1.07) rotate(3deg)}}
+.char-fire.active{opacity:1}
+.character{width:90px;height:90px;border-radius:50%;position:relative;z-index:2;background:linear-gradient(135deg,#1e40af,#3b82f6);display:flex;align-items:center;justify-content:center;font-size:2.5rem;box-shadow:0 0 0 3px rgba(59,130,246,.3),0 8px 32px rgba(0,0,0,.5);transition:transform .15s;cursor:pointer}
+.character.hit{animation:shake .4s}.character.happy{animation:bounce .35s}
+@keyframes shake{0%,100%{transform:translateX(0) rotate(0)}20%{transform:translateX(-12px) rotate(-8deg)}40%{transform:translateX(12px) rotate(8deg)}60%{transform:translateX(-8px) rotate(-4deg)}80%{transform:translateX(8px) rotate(4deg)}}
+@keyframes bounce{0%,100%{transform:translateY(0) scale(1)}35%{transform:translateY(-14px) scale(1.12)}65%{transform:translateY(-5px) scale(1.05)}}
+
+/* SKIN TOOLTIP */
+.char-skin-hint{position:absolute;bottom:-20px;font-size:.6rem;color:var(--text3);text-align:center;white-space:nowrap}
+
+/* COMBO */
+.combo-wrap{display:flex;flex-direction:column;align-items:center;gap:4px}
+.combo-hint{font-size:.68rem;text-transform:uppercase;letter-spacing:2px;color:var(--text3)}
+.combo{font-family:'Space Grotesk',sans-serif;font-size:clamp(2.5rem,8vw,4rem);font-weight:800;letter-spacing:8px;padding:12px 36px;border-radius:20px;text-transform:uppercase;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);transition:all .2s;text-shadow:0 0 20px rgba(255,255,255,.15)}
+.combo.rare{background:linear-gradient(135deg,rgba(124,58,237,.4),rgba(219,39,119,.3));border-color:rgba(168,85,247,.5);box-shadow:0 0 40px rgba(168,85,247,.3),inset 0 1px 0 rgba(255,255,255,.1)}
+.combo.pulse{animation:comboPulse .3s}
+@keyframes comboPulse{0%{transform:scale(1)}50%{transform:scale(1.07)}100%{transform:scale(1)}}
+
+/* WORD LENGTH BONUS */
+.bonus-meter{display:flex;gap:4px;align-items:center;justify-content:center}
+.bonus-node{width:18px;height:18px;border-radius:50%;border:2px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);transition:all .25s;font-size:.55rem;display:flex;align-items:center;justify-content:center;color:transparent}
+.bonus-node.lit{border-color:#fbbf24;background:rgba(251,191,36,.3);color:#fbbf24}
+.bonus-node.super{border-color:#f472b6;background:rgba(244,114,182,.3);color:#f472b6}
+.bonus-meter-label{font-size:.62rem;color:var(--text3);text-transform:uppercase;letter-spacing:1px}
+
+/* TIMER */
+.timer-outer{width:100%;max-width:580px;height:8px;border-radius:99px;background:rgba(255,255,255,.08);position:relative}
+.timer-bar{height:100%;border-radius:99px;background:linear-gradient(90deg,#22c55e,#eab308,#ef4444);transition:width .05s linear;position:relative;box-shadow:0 0 8px rgba(255,255,255,.15)}
+.timer-bar::after{content:'';position:absolute;right:-2px;top:50%;transform:translateY(-50%);width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:0 0 8px #fff;opacity:.85}
+.timer-outer.frozen .timer-bar{background:linear-gradient(90deg,#67e8f9,#3b82f6)!important;box-shadow:0 0 12px rgba(103,232,249,.5)}
+.timer-outer.frozen .timer-bar::after{background:#67e8f9;box-shadow:0 0 10px #67e8f9}
+.timer-text{font-size:.72rem;font-weight:700;color:var(--text3);text-align:right;width:100%;max-width:580px;margin-top:-2px}
+
+/* INPUT */
+.input-wrap{position:relative;width:100%;max-width:580px}
+#wordInput{width:100%;padding:16px 20px;font-size:1.2rem;font-weight:700;font-family:'Inter',sans-serif;letter-spacing:1px;text-align:center;background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.1);border-radius:var(--radius);color:var(--text);outline:none;transition:border-color .2s,box-shadow .2s;caret-color:#60a5fa}
+#wordInput:focus{border-color:rgba(99,102,241,.6);box-shadow:0 0 0 3px rgba(99,102,241,.15),0 0 30px rgba(59,130,246,.2)}
+#wordInput:disabled{opacity:.3;cursor:not-allowed}
+#wordInput::placeholder{color:var(--text3);font-weight:500}
+.input-hint{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:.72rem;color:var(--text3);font-weight:600;background:rgba(255,255,255,.07);padding:2px 7px;border-radius:6px;border:1px solid rgba(255,255,255,.08);pointer-events:none}
+
+/* MESSAGE */
+.message{min-height:20px;font-size:.88rem;font-weight:600;text-align:center;transition:all .15s;letter-spacing:.3px}
+.message.good{color:#4ade80}.message.bad{color:#f87171}.message.info{color:#fde047}
+
+/* AI TAUNT */
+.ai-taunt{min-height:18px;font-size:.78rem;font-style:italic;color:#f472b6;text-align:center;opacity:0;transition:opacity .3s}
+.ai-taunt.show{opacity:1}
+
+/* ALPHABET */
+.alphabet{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;max-width:580px}
+.letter-badge{width:24px;height:24px;border-radius:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.07);display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:700;color:var(--text3);transition:all .2s}
+.letter-badge.used{background:linear-gradient(135deg,#15803d,#22c55e);color:#fff;border-color:transparent;box-shadow:0 0 8px rgba(34,197,94,.4)}
+
+/* CHAIN */
+.chain-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 14px;background:rgba(139,92,246,.15);border:1px solid rgba(139,92,246,.3);border-radius:99px;font-size:.82rem;font-weight:700;color:#c4b5fd;transition:all .3s}
+.chain-badge.highlight{background:rgba(139,92,246,.3);border-color:rgba(168,85,247,.6);box-shadow:0 0 16px rgba(139,92,246,.4)}
+
+/* CONTROLS */
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;width:100%;max-width:740px}
+.select-wrap{position:relative}
+.select-wrap select{appearance:none;-webkit-appearance:none;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:var(--radius-sm);color:var(--text);font-family:'Inter',sans-serif;font-size:.85rem;font-weight:600;padding:9px 30px 9px 12px;cursor:pointer;outline:none;transition:all .2s}
+.select-wrap select:hover{background:rgba(255,255,255,.12)}
+.select-wrap::after{content:'▾';position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--text3);pointer-events:none;font-size:.75rem}
+.select-wrap select option{background:#1e293b;color:#f1f5f9}
+
+/* BUTTONS */
+.btn{border:none;border-radius:var(--radius-sm);font-family:'Inter',sans-serif;font-weight:700;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;position:relative;overflow:hidden}
+.btn:disabled{opacity:.35;cursor:not-allowed}.btn:active:not(:disabled){transform:scale(.97)}
+.btn-start{background:linear-gradient(135deg,#059669,#10b981);color:#fff;padding:11px 24px;font-size:.95rem;box-shadow:0 4px 15px rgba(16,185,129,.3)}
+.btn-start:hover:not(:disabled){box-shadow:0 4px 20px rgba(16,185,129,.5);transform:translateY(-1px)}
+.btn-ghost{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:var(--text);padding:9px 14px;font-size:.82rem}
+.btn-ghost:hover:not(:disabled){background:rgba(255,255,255,.12)}
+.btn-powerup{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:var(--text);padding:9px 14px;font-size:.82rem}
+.btn-powerup:hover:not(:disabled){background:rgba(255,255,255,.13);border-color:rgba(255,255,255,.2);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.3)}
+.btn-powerup.hint-btn:hover:not(:disabled){border-color:rgba(234,179,8,.5)}
+.btn-powerup.skip-btn:hover:not(:disabled){border-color:rgba(96,165,250,.5)}
+.btn-powerup.freeze-btn:hover:not(:disabled){border-color:rgba(6,182,212,.5)}
+.btn-powerup.bomb-btn:hover:not(:disabled){border-color:rgba(239,68,68,.5)}
+.btn-danger{background:rgba(220,38,38,.6);border:1px solid rgba(239,68,68,.3);color:#fff;padding:8px 14px;font-size:.8rem}
+.btn-danger:hover:not(:disabled){background:rgba(220,38,38,.85)}
+.btn-blue{background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;padding:10px 18px;font-size:.85rem;box-shadow:0 4px 12px rgba(59,130,246,.3)}
+
+/* DICT STATUS */
+.dict-status{font-size:.75rem;color:var(--text2);text-align:center;background:rgba(255,255,255,.04);border-radius:8px;padding:6px 12px;border:1px solid rgba(255,255,255,.07)}
+.dict-status.error{color:#fca5a5;border-color:rgba(239,68,68,.25);background:rgba(239,68,68,.07)}
+.dict-status.ok{color:#86efac;border-color:rgba(34,197,94,.25);background:rgba(34,197,94,.07)}
+.dict-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:4px}
+
+/* BOTTOM */
+.bottom{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+@media(max-width:780px){.bottom{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.bottom{grid-template-columns:1fr}}
+
+/* PANELS */
+.panel{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:var(--radius);padding:14px;overflow:hidden}
+.panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.panel-title{font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--text2)}
+
+/* TABS */
+.tabs{display:flex;gap:4px;background:rgba(0,0,0,.3);border-radius:var(--radius-sm);padding:3px;flex-wrap:wrap}
+.tab-btn{padding:5px 10px;font-size:.72rem;font-weight:700;letter-spacing:.5px;border:none;background:transparent;color:var(--text3);border-radius:8px;cursor:pointer;transition:all .15s;font-family:'Inter',sans-serif;white-space:nowrap}
+.tab-btn.active{background:var(--blue);color:#fff;box-shadow:0 2px 8px rgba(59,130,246,.4)}
+.tab-content{max-height:180px;overflow-y:auto;font-size:.85rem;line-height:1.8}
+
+/* WORD CHIPS */
+.word-chip{display:inline-block;padding:1px 7px;margin:1px;background:rgba(255,255,255,.07);border-radius:6px;border:1px solid rgba(255,255,255,.08);font-size:.78rem;color:var(--text2);transition:all .15s}
+.word-chip:hover{background:rgba(255,255,255,.12);color:var(--text)}
+.word-chip.long{background:rgba(34,197,94,.15);border-color:rgba(34,197,94,.3);color:#86efac}
+.word-chip.rare{background:rgba(168,85,247,.15);border-color:rgba(168,85,247,.3);color:#c4b5fd}
+.word-chip.mega{background:rgba(251,191,36,.15);border-color:rgba(251,191,36,.3);color:#fbbf24}
+
+/* SHOP */
+.shop-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.shop-item{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:var(--radius-sm);padding:10px;text-align:center;cursor:pointer;transition:all .2s}
+.shop-item:hover:not(.maxed){background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.18);transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,.3)}
+.shop-item.maxed{opacity:.4;cursor:not-allowed}
+.shop-ic{font-size:1.5rem;line-height:1}.shop-nm{font-size:.78rem;font-weight:700;margin-top:4px;color:var(--text)}
+.shop-desc{font-size:.65rem;color:var(--text3);margin-top:2px}
+.shop-cost{display:inline-flex;align-items:center;gap:3px;margin-top:5px;font-size:.72rem;font-weight:700;color:#fbbf24;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.2);border-radius:99px;padding:2px 8px}
+.shop-owned{font-size:.65rem;color:var(--text3);margin-top:3px}.shop-owned.full{color:#f97316}
+
+/* SKINS PANEL */
+.skins-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.skin-card{border-radius:12px;padding:10px 6px;text-align:center;cursor:pointer;border:2px solid transparent;background:rgba(255,255,255,.04);transition:all .2s}
+.skin-card:hover:not(.locked){transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,.3)}
+.skin-card.equipped{border-color:#fbbf24;background:rgba(251,191,36,.08);box-shadow:0 0 12px rgba(251,191,36,.2)}
+.skin-card.locked{opacity:.5;cursor:not-allowed;filter:grayscale(30%)}
+.skin-emoji{font-size:2rem;display:block;margin-bottom:4px}
+.skin-name{font-size:.65rem;font-weight:700;color:var(--text2)}
+.skin-cost{font-size:.65rem;color:#fbbf24;margin-top:2px}
+.skin-owned{font-size:.6rem;color:#4ade80;margin-top:2px}
+
+/* LEADERBOARD */
+.lb-row{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:8px;margin-bottom:3px;font-size:.82rem}
+.lb-row:nth-child(1){background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.2)}
+.lb-row:nth-child(2){background:rgba(148,163,184,.08)}
+.lb-row:nth-child(3){background:rgba(234,179,8,.08)}
+.lb-rank{font-weight:800;width:20px;flex-shrink:0;text-align:center}
+.lb-name{flex:1;font-weight:700;color:var(--text)}
+.lb-score{font-weight:800;color:#60a5fa}
+.lb-mode{font-size:.65rem;color:var(--text3);background:rgba(255,255,255,.06);padding:1px 5px;border-radius:4px}
+
+/* ACH */
+.ach-item{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:8px;margin-bottom:3px;font-size:.78rem;background:rgba(255,255,255,.03)}
+.ach-item.unlocked{background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2)}
+.ach-item.locked{opacity:.4;filter:grayscale(40%)}
+.ach-ic{font-size:1.1rem;flex-shrink:0;width:22px;text-align:center}
+.ach-nm{font-weight:700;color:var(--text)}.ach-desc{color:var(--text3);font-size:.68rem}
+
+/* STAT LINES */
+.stat-line{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:.82rem;color:var(--text2)}
+.stat-line:last-child{border-bottom:none}.stat-line b{color:var(--text);font-weight:700}
+
+/* CALENDAR HEATMAP */
+.cal-grid{display:flex;flex-direction:column;gap:4px}
+.cal-week{display:flex;gap:4px}
+.cal-day{width:14px;height:14px;border-radius:3px;background:rgba(255,255,255,.05);cursor:default;position:relative;transition:background .2s}
+.cal-day.played{background:rgba(99,102,241,.5)}
+.cal-day.today{box-shadow:0 0 0 1px #fbbf24}
+.cal-day[title]:hover::after{content:attr(title);position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);background:#0f172a;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:3px 7px;font-size:.62rem;white-space:nowrap;z-index:99;color:var(--text);pointer-events:none}
+.cal-label{font-size:.6rem;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:1px}
+
+/* TOAST */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:rgba(15,23,42,.95);border:1px solid rgba(255,255,255,.15);backdrop-filter:blur(20px);padding:10px 22px;border-radius:12px;font-weight:700;font-size:.88rem;z-index:999;opacity:0;transition:all .3s cubic-bezier(.34,1.56,.64,1);pointer-events:none;box-shadow:0 8px 32px rgba(0,0,0,.5);white-space:nowrap}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* LEVEL UP OVERLAY */
+#levelUpBanner{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0);z-index:800;background:linear-gradient(135deg,rgba(251,191,36,.25),rgba(249,115,22,.2));border:2px solid rgba(251,191,36,.5);backdrop-filter:blur(20px);padding:20px 48px;border-radius:24px;text-align:center;pointer-events:none;opacity:0;transition:all .4s cubic-bezier(.34,1.56,.64,1)}
+#levelUpBanner.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+.lu-title{font-family:'Space Grotesk',sans-serif;font-size:1.6rem;font-weight:800;color:#fbbf24}
+.lu-sub{font-size:.85rem;color:var(--text2);margin-top:4px}
+
+/* FLOATERS */
+.floater{position:absolute;font-weight:800;font-size:1.35rem;pointer-events:none;animation:floatUp .9s forwards;z-index:10;text-shadow:0 2px 8px rgba(0,0,0,.5);font-family:'Space Grotesk',sans-serif}
+@keyframes floatUp{0%{opacity:1;transform:translateX(-50%) translateY(0) scale(.8)}20%{transform:translateX(-50%) translateY(-12px) scale(1.12)}100%{opacity:0;transform:translateX(-50%) translateY(-70px) scale(.9)}}
+
+/* GAME OVER */
+#gameOverOverlay{position:fixed;inset:0;z-index:500;background:rgba(8,12,20,.87);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .4s}
+#gameOverOverlay.show{opacity:1;pointer-events:all}
+.go-card{background:linear-gradient(160deg,#0f172a,#1e293b);border:1px solid rgba(255,255,255,.12);border-radius:28px;padding:32px 36px;text-align:center;max-width:480px;width:92%;box-shadow:0 40px 80px rgba(0,0,0,.6);transform:scale(.85);transition:transform .4s cubic-bezier(.34,1.56,.64,1)}
+#gameOverOverlay.show .go-card{transform:scale(1)}
+.go-emoji{font-size:3.5rem;margin-bottom:10px;display:block;animation:popIn .5s .15s both}
+@keyframes popIn{0%{transform:scale(0) rotate(-20deg)}80%{transform:scale(1.1) rotate(3deg)}100%{transform:scale(1) rotate(0)}}
+.go-title{font-family:'Space Grotesk',sans-serif;font-size:1.7rem;font-weight:800;margin-bottom:4px}
+.go-sub{color:var(--text2);font-size:.85rem;margin-bottom:16px}
+.go-score{font-family:'Space Grotesk',sans-serif;font-size:3.2rem;font-weight:800;background:linear-gradient(135deg,#60a5fa,#a78bfa);-webkit-background-clip:text;background-clip:text;color:transparent;line-height:1;margin-bottom:4px}
+.go-score-label{color:var(--text3);font-size:.72rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:16px}
+.go-new-best{display:inline-flex;align-items:center;gap:6px;padding:5px 16px;background:linear-gradient(135deg,rgba(251,191,36,.2),rgba(234,179,8,.1));border:1px solid rgba(251,191,36,.4);border-radius:99px;color:#fbbf24;font-size:.82rem;font-weight:700;margin-bottom:12px}
+.go-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px}
+.go-stat{background:rgba(255,255,255,.05);border-radius:12px;padding:10px}
+.go-stat-v{font-size:1.3rem;font-weight:800;color:var(--text)}
+.go-stat-l{font-size:.62rem;color:var(--text3);text-transform:uppercase;letter-spacing:1px}
+.go-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.name-input-wrap{margin-bottom:12px}
+.name-input-wrap input{width:100%;padding:9px 14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:var(--text);font-family:'Inter',sans-serif;font-size:.9rem;text-align:center;outline:none}
+.name-input-wrap input:focus{border-color:rgba(99,102,241,.5)}
+
+/* AI vs BANNER */
+.vs-banner{display:flex;gap:16px;align-items:center;justify-content:center;padding:10px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:12px;font-size:.85rem;font-weight:700}
+.vs-banner .ai-word{color:#f87171;font-family:'Space Grotesk',sans-serif;font-size:1rem;letter-spacing:2px}
+
+/* SCREEN SHAKE */
+@keyframes screenShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
+.game.shake{animation:screenShake .35s}
+
+/* RESPONSIVE */
+@media(max-width:680px){
+  .stats{grid-template-columns:repeat(3,1fr)}.combo{font-size:2.5rem;padding:10px 24px;letter-spacing:5px}
+  h1{font-size:2rem;letter-spacing:4px}.go-card{padding:24px 18px}.go-score{font-size:2.4rem}
+  .skins-grid{grid-template-columns:repeat(3,1fr)}
+}
+@media(max-width:420px){
+  .stats{grid-template-columns:repeat(2,1fr)}.stat-card.wide{grid-column:span 2}
+}
+</style>
+</head>
+<body>
+
+<div id="stars"></div>
+<div id="levelUpBanner"><div class="lu-title" id="luTitle">⬆ LEVEL UP!</div><div class="lu-sub" id="luSub">Level 2 reached</div></div>
+
+<div class="game" id="game">
+  <div class="header">
+    <h1>WORDBOMB</h1>
+    <div class="subtitle">Think fast. Type faster. 💣</div>
+    <div class="header-meta">
+      <div class="daily-streak-badge" id="dailyStreakBadge">🔥 Login streak: 1</div>
+      <div class="version-badge">v2.0 · Enhanced</div>
+    </div>
+  </div>
+
+  <div class="diff-row" id="diffRow"></div>
+
+  <div class="stats">
+    <div class="stat-card coins"><div class="stat-label">💰 Coins</div><div class="stat-value" id="coins">0</div></div>
+    <div class="stat-card score"><div class="stat-label">⚡ Score</div><div class="stat-value" id="score">0</div></div>
+    <div class="stat-card streak"><div class="stat-label">🔥 Long Streak</div><div class="stat-value" id="streak">0</div></div>
+    <div class="stat-card mult"><div class="stat-label">✨ Multi</div><div class="stat-value" id="multiplier">1x</div></div>
+    <div class="stat-card"><div class="stat-label">❤️ Lives</div><div class="stat-value" id="hearts">❤️❤️❤️</div></div>
+    <div class="stat-card"><div class="stat-label">🏆 Best</div><div class="stat-value" id="best">0</div></div>
+    <div class="stat-card wide">
+      <div class="stat-label">📈 Level</div>
+      <div class="stat-value" id="levelVal">Lv 1</div>
+      <div class="level-bar-outer"><div class="level-bar-inner" id="levelBar" style="width:0%"></div></div>
+    </div>
+    <div class="stat-card wide"><div class="stat-label" id="chainLabel">Mode</div><div class="stat-value" id="chainVal">—</div></div>
+  </div>
+
+  <div class="arena" id="arena">
+    <div id="vsSectionWrap" style="display:none;width:100%;max-width:580px">
+      <div class="vs-section">
+        <div class="vs-player-side">
+          <div class="vs-name">YOU</div>
+          <div class="vs-hp-bar"><div class="vs-hp-fill player" id="vsPlayerHP" style="width:100%"></div></div>
+          <div class="vs-hp-text" id="vsPlayerHPText">❤️ 5 lives</div>
+        </div>
+        <div class="vs-divider">⚔️</div>
+        <div class="vs-ai-side">
+          <div class="vs-name" id="aiName">BOT</div>
+          <div class="vs-hp-bar"><div class="vs-hp-fill ai" id="vsAIHP" style="width:100%"></div></div>
+          <div class="vs-hp-text" id="vsAIHPText">❤️ 5 lives</div>
+          <div class="ai-thinking" id="aiThinking"></div>
+        </div>
+      </div>
+      <div class="ai-taunt" id="aiTaunt"></div>
+    </div>
+
+    <div class="char-wrap">
+      <div class="char-ring"></div>
+      <div class="char-glow" id="charGlow"></div>
+      <div class="char-fire" id="charFire"></div>
+      <div class="character" id="character" title="Click to change skin">😎</div>
+      <div class="char-skin-hint">click to change skin</div>
+    </div>
+
+    <div class="combo-wrap">
+      <div class="combo-hint">TYPE A WORD CONTAINING</div>
+      <div class="combo" id="combo">—</div>
+    </div>
+
+    <div id="bonusMeterWrap" class="bonus-meter" style="opacity:.5">
+      <span class="bonus-meter-label">Word bonus:</span>
+      <div class="bonus-node" id="bn0">3</div>
+      <div class="bonus-node" id="bn1">4</div>
+      <div class="bonus-node" id="bn2">5</div>
+      <div class="bonus-node" id="bn3">6</div>
+      <div class="bonus-node" id="bn4">7</div>
+      <div class="bonus-node" id="bn5">8</div>
+      <div class="bonus-node" id="bn6">9</div>
+      <div class="bonus-node" id="bn7">10+</div>
+    </div>
+
+    <div class="chain-badge" id="chainBadge" style="display:none">🔗 Must start with: <strong id="chainStart">?</strong></div>
+
+    <div class="timer-outer" id="timerOuter">
+      <div class="timer-bar" id="timerBar" style="width:100%"></div>
+    </div>
+    <div class="timer-text" id="timerText">—</div>
+
+    <div class="input-wrap">
+      <input id="wordInput" type="text" placeholder="Type a word and press Enter…"
+             autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" disabled>
+      <span class="input-hint">↵ Enter</span>
+    </div>
+
+    <div class="alphabet" id="alphabet"></div>
+    <div class="message" id="message"></div>
+    <div class="ai-taunt" id="aiTauntInline"></div>
+
+    <div class="controls">
+      <div class="select-wrap">
+        <select id="difficulty">
+          <option value="easy">😌 Easy</option>
+          <option value="medium" selected>🎯 Medium</option>
+          <option value="hard">💀 Hard</option>
+          <option value="insane">🔥 Insane</option>
+        </select>
+      </div>
+      <div class="select-wrap">
+        <select id="modeSelect">
+          <option value="classic" selected>🎯 Classic</option>
+          <option value="zen">🧘 Zen</option>
+          <option value="sudden">☠️ Sudden Death</option>
+          <option value="chain">🔗 Chain</option>
+          <option value="blitz">⚡ Blitz</option>
+          <option value="survival">🫀 Survival</option>
+          <option value="vs_ai">🤖 vs AI</option>
+          <option value="daily">📅 Daily</option>
+        </select>
+      </div>
+      <div class="select-wrap">
+        <select id="lifeSelect">
+          <option value="3">3 Lives</option>
+          <option value="5" selected>5 Lives</option>
+          <option value="7">7 Lives</option>
+          <option value="10">10 Lives</option>
+        </select>
+      </div>
+      <button class="btn btn-start" id="startBtn">▶ Start Game</button>
+    </div>
+
+    <div class="controls" style="margin-top:-4px">
+      <button class="btn btn-powerup hint-btn" id="hintBtn" disabled>💡 Hint</button>
+      <button class="btn btn-powerup skip-btn" id="skipBtn" disabled>⏭ Skip</button>
+      <button class="btn btn-powerup freeze-btn" id="freezeBtn" disabled>❄️ Freeze</button>
+      <button class="btn btn-powerup bomb-btn" id="bombBtn" disabled>💣 Bomb</button>
+      <button class="btn btn-ghost" id="muteBtn">🔊</button>
+    </div>
+
+    <div class="dict-status" id="dictStatus">⏳ Loading dictionary…</div>
+    <div class="dict-actions">
+      <input type="file" id="dictFile" accept=".txt" style="display:none">
+      <button class="btn btn-ghost" id="uploadDictBtn" style="font-size:.75rem">📂 Upload dictionary.txt</button>
+      <button class="btn btn-ghost" id="clearDictBtn" style="font-size:.75rem">🗑 Clear cache</button>
+    </div>
+  </div>
+
+  <div class="bottom">
+    <!-- LEFT: Words / Stats / Achievements / Missed -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="tabs" id="tabs">
+          <button class="tab-btn active" data-tab="used">Used</button>
+          <button class="tab-btn" data-tab="stats">Stats</button>
+          <button class="tab-btn" data-tab="ach">🏅</button>
+          <button class="tab-btn" data-tab="calendar">📅</button>
+          <button class="tab-btn" data-tab="missed">Missed</button>
+        </div>
+      </div>
+      <div id="tabUsed" class="tab-content"></div>
+      <div id="tabStats" class="tab-content" style="display:none"></div>
+      <div id="tabAch" class="tab-content" style="display:none"></div>
+      <div id="tabCalendar" class="tab-content" style="display:none"></div>
+      <div id="tabMissed" class="tab-content" style="display:none">
+        <span style="color:var(--text3);font-size:.82rem">Play a game to see words you could've used.</span>
+      </div>
+    </div>
+
+    <!-- MIDDLE: Shop -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">🛒 Shop</div>
+      </div>
+      <div class="shop-grid" id="shopGrid"></div>
+      <div style="margin-top:10px;text-align:center">
+        <button class="btn btn-danger" id="resetBtn">🗑 Reset Save</button>
+      </div>
+    </div>
+
+    <!-- RIGHT: Skins + Leaderboard -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="tabs" id="tabs2">
+          <button class="tab-btn active" data-tab2="skins">🎨 Skins</button>
+          <button class="tab-btn" data-tab2="lb">🏆 Board</button>
+        </div>
+      </div>
+      <div id="tab2Skins" class="tab-content"></div>
+      <div id="tab2Lb" class="tab-content" style="display:none"></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<div id="gameOverOverlay">
+  <div class="go-card">
+    <span class="go-emoji" id="goEmoji">💥</span>
+    <div class="go-title" id="goTitle">Game Over</div>
+    <div class="go-sub" id="goSub">Better luck next time!</div>
+    <div class="go-score" id="goScore">0</div>
+    <div class="go-score-label">FINAL SCORE</div>
+    <div id="goNewBest" style="display:none" class="go-new-best">🏆 New Personal Best!</div>
+    <div class="go-stats">
+      <div class="go-stat"><div class="go-stat-v" id="goWords">0</div><div class="go-stat-l">Words</div></div>
+      <div class="go-stat"><div class="go-stat-v" id="goCoins">+0</div><div class="go-stat-l">Coins</div></div>
+      <div class="go-stat"><div class="go-stat-v" id="goStreak">0</div><div class="go-stat-l">Best Streak</div></div>
+      <div class="go-stat"><div class="go-stat-v" id="goLongest">—</div><div class="go-stat-l">Longest Word</div></div>
+      <div class="go-stat"><div class="go-stat-v" id="goLetters">0</div><div class="go-stat-l">Letters Used</div></div>
+      <div class="go-stat"><div class="go-stat-v" id="goLevel">Lv 1</div><div class="go-stat-l">Level Reached</div></div>
+    </div>
+    <div class="name-input-wrap">
+      <input type="text" id="lbNameInput" placeholder="Your name for leaderboard…" maxlength="16" autocomplete="off">
+    </div>
+    <div class="go-btns">
+      <button class="btn btn-blue" id="goSaveScore">💾 Save Score</button>
+      <button class="btn btn-start" id="goPlayAgain">▶ Play Again</button>
+      <button class="btn btn-ghost" id="goClose">✕ Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ─────────────────────────────────────────────
+   STARS
+───────────────────────────────────────────── */
+(function(){
+  const el=document.getElementById('stars');
+  for(let i=0;i<130;i++){
+    const s=document.createElement('div');s.className='star';
+    const sz=Math.random()*2+.5;
+    s.style.cssText=`width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*100}%;--d:${(Math.random()*4+2).toFixed(1)}s;--del:${(Math.random()*3).toFixed(1)}s;opacity:${(Math.random()*.4+.1).toFixed(2)}`;
+    el.appendChild(s);
+  }
+})();
+
+/* ─────────────────────────────────────────────
+   COMBO POOLS
+───────────────────────────────────────────── */
+const COMBO_POOLS={
+  easy:["an","in","on","at","it","or","er","ar","en","ed","es","is","us","as","of","to","st","nd","rd","th","ng","ch","sh","ph","wh","ck","ll","ss","tt","ff","mm","nn","pp","rr","ea","ou","oo","ee","ai","ay","ow","oi","oy","ie","ei","ue","ui","au","aw","ew","nt","mp","nk","nc","ld","lt","lk","rt","rd","rn","rm","rs","rk","tr","pr","gr","cr","fr","br","dr","pl","cl","bl","fl","gl","sl","sp","sc","sk","sm","sn","sw","ing","ion","ent","est","all","and","ate","ore","one","out","ear","ant","ick","ack","ove","ill"],
+  medium:["ain","ing","ion","ent","est","all","ous","ard","ate","ant","and","ash","air","ear","our","out","ove","ill","ick","ack","ang","ank","ame","ace","ice","ide","ine","ive","ore","oke","ump","unk","ung","eam","eat","oon","ool","oot","own","row","low","man","men","son","ter","tin","tar","tor","ble","cle","dle","gle","kle","ple","tle","zle","age","ake","ale","alk","alt","amp","ane","ape","arm","arn","arp","art","ask","ast","awn","aze","eak","eal","ean","eap","eck","eed","eek","eel","een","eep","eet","ell","elt","end","ess","ile","ilk","ime","imp","ind","ink","int","ipe","ire","irl","irm","irt","ish","isk","iss","ist","ite","ize","ock","ode","oil","oin","old","ole","olt","ome","ond","one","ong","ood","oof","ook","oom","oop","oot","ope","ord","ork","orm","orn","ort","ose","oss","ost","ote","owl","uck","ude","uff","ugh","ule","ull","ult","ume","und","une","unt","urn","cha","str","spr","thr","pre","dis","sub","tri","com","con","per","for","res","sta","sto","sur","mis","pro","par","pen","rep","sel","tra","tre","uni"],
+  hard:["ght","igh","aug","ough","augh","eigh","qua","que","qui","quo","squ","scr","spl","spr","str","thr","phr","sch","sph","shr","thw","tch","dge","ndle","mble","ckle","ddle","pple","ttle","stle","mple","mph","nch","rch","lth","rth","pth","fth","tion","sion","ment","ness","less","able","ible","ize","ify","ity","anti","auto","semi","over","fore","inter","trans","bio","geo","neo","syn","tel","kn","gn","ps","pt","mn","wr","rh","xy","zz"],
+  insane:["rrh","yph","oxy","phth","chth","thm","gnos","mnem","pneu","czar","ggl","ngst","ngth","rmth","cqu","tch","tsk","zyg","zym","ypt","yps","rkh","scl","stl","sphy","wth","xen","xer","xis","xon"]
+};
+const DIFFICULTY={
+  easy:   {time:8,  minLen:3,scoreMult:1,label:"Easy",  pill:"pill-easy"},
+  medium: {time:6,  minLen:3,scoreMult:2,label:"Medium",pill:"pill-med"},
+  hard:   {time:4,  minLen:4,scoreMult:3,label:"Hard",  pill:"pill-hard"},
+  insane: {time:3,  minLen:4,scoreMult:5,label:"Insane",pill:"pill-insane"}
+};
+
+/* ─────────────────────────────────────────────
+   SKINS
+───────────────────────────────────────────── */
+const SKINS=[
+  {id:"default",  em:"😎",nm:"Default",    cost:0},
+  {id:"cool",     em:"🤩",nm:"Star",       cost:50},
+  {id:"fire",     em:"🔥",nm:"Inferno",    cost:100},
+  {id:"robot",    em:"🤖",nm:"Robot",      cost:150},
+  {id:"alien",    em:"👽",nm:"Alien",       cost:200},
+  {id:"ninja",    em:"🥷",nm:"Ninja",      cost:250},
+  {id:"ghost",    em:"👻",nm:"Ghost",      cost:300},
+  {id:"wizard",   em:"🧙",nm:"Wizard",     cost:350},
+  {id:"dragon",   em:"🐉",nm:"Dragon",     cost:500},
+  {id:"crown",    em:"👑",nm:"Royalty",    cost:750},
+  {id:"bomb",     em:"💣",nm:"THE BOMB",   cost:1000},
+  {id:"galaxy",   em:"🌌",nm:"Galaxy",     cost:1500},
+];
+
+/* ─────────────────────────────────────────────
+   SHOP
+───────────────────────────────────────────── */
+const SHOP_ITEMS=[
+  {id:"hint",   ic:"💡",nm:"Hint Pack",   cost:25, max:99,desc:"+5 hints per buy"},
+  {id:"skip",   ic:"⏭", nm:"Skip Pack",  cost:35, max:99,desc:"+5 skips per buy"},
+  {id:"freeze", ic:"❄️",nm:"Freeze Pack", cost:50, max:99,desc:"+3 freezes per buy"},
+  {id:"bomb",   ic:"💣",nm:"Bomb Pack",   cost:70, max:99,desc:"+2 word bombs per buy"},
+  {id:"life",   ic:"❤️",nm:"Extra Life",  cost:75, max:99,desc:"+1 starting life"},
+  {id:"slow",   ic:"🐢",nm:"Slow Timer",  cost:100,max:5, desc:"+0.5s base time"},
+  {id:"mult",   ic:"⭐",nm:"Bonus Multi", cost:150,max:5, desc:"+0.5x base multiplier"},
+  {id:"xp",     ic:"📈",nm:"XP Boost",    cost:200,max:5, desc:"+20% XP per buy"},
+];
+
+/* ─────────────────────────────────────────────
+   ACHIEVEMENTS (40 total)
+───────────────────────────────────────────── */
+const ACHIEVEMENTS=[
+  // Basic
+  {id:"first_word",   ic:"🎉",nm:"First Word",      desc:"Submit your first word",                test:s=>s.totalWords>=1},
+  {id:"words_10",     ic:"📝",nm:"Getting Started",  desc:"10 lifetime words",                     test:s=>s.totalWords>=10},
+  {id:"words_50",     ic:"📚",nm:"Bookworm",         desc:"50 lifetime words",                     test:s=>s.totalWords>=50},
+  {id:"words_200",    ic:"🧠",nm:"Lexicon",          desc:"200 lifetime words",                    test:s=>s.totalWords>=200},
+  {id:"words_500",    ic:"🎓",nm:"Word Scholar",     desc:"500 lifetime words",                    test:s=>s.totalWords>=500},
+  {id:"words_1000",   ic:"🏛️",nm:"Word Master",     desc:"1,000 lifetime words",                  test:s=>s.totalWords>=1000},
+  {id:"words_5000",   ic:"📖",nm:"Living Dictionary",desc:"5,000 lifetime words",                  test:s=>s.totalWords>=5000},
+  // Score
+  {id:"score_100",    ic:"💯",nm:"Triple Digits",    desc:"Score 100 in one run",                  test:s=>s.best>=100},
+  {id:"score_500",    ic:"⭐",nm:"Half K",           desc:"Score 500 in one run",                  test:s=>s.best>=500},
+  {id:"score_1000",   ic:"🚀",nm:"Score 1k",         desc:"Score 1,000 in one run",                test:s=>s.best>=1000},
+  {id:"score_5000",   ic:"🌟",nm:"Score 5k",         desc:"Score 5,000 in one run",                test:s=>s.best>=5000},
+  {id:"score_10000",  ic:"💫",nm:"Score 10k",        desc:"Score 10,000 in one run",               test:s=>s.best>=10000},
+  {id:"score_25000",  ic:"🌌",nm:"Galaxy Brain",     desc:"Score 25,000 in one run",               test:s=>s.best>=25000},
+  // Word length
+  {id:"long_6",       ic:"📏",nm:"Hexagram",         desc:"Play a 6+ letter word",                 test:s=>(s.longestWord||"").length>=6},
+  {id:"long_8",       ic:"📐",nm:"Octogram",         desc:"Play an 8+ letter word",                test:s=>(s.longestWord||"").length>=8},
+  {id:"long_10",      ic:"🦒",nm:"Giraffe Word",     desc:"Play a 10+ letter word",                test:s=>(s.longestWord||"").length>=10},
+  {id:"long_12",      ic:"🐋",nm:"Marathon Word",    desc:"Play a 12+ letter word",                test:s=>(s.longestWord||"").length>=12},
+  {id:"long_15",      ic:"🌐",nm:"Epic Word",        desc:"Play a 15+ letter word",                test:s=>(s.longestWord||"").length>=15},
+  // Streak/multiplier
+  {id:"streak_5",     ic:"🔥",nm:"On Fire",          desc:"5-word long streak",                    test:s=>(s.bestLongStreak||0)>=5},
+  {id:"streak_10",    ic:"🌋",nm:"Volcano",          desc:"10-word long streak",                   test:s=>(s.bestLongStreak||0)>=10},
+  {id:"streak_20",    ic:"☄️",nm:"Comet",            desc:"20-word long streak",                   test:s=>(s.bestLongStreak||0)>=20},
+  // Special
+  {id:"alphabet",     ic:"🔤",nm:"Full Alphabet",    desc:"Use every letter in one run"},
+  {id:"rare_qzxj",    ic:"💎",nm:"Rare Earth",       desc:"Use Q, Z, X, or J in a word"},
+  {id:"five_rare",    ic:"💠",nm:"Jewel Collector",  desc:"Use Q/Z/X/J 5 times",                   test:s=>(s.rareLetterUses||0)>=5},
+  {id:"no_hints",     ic:"🥷",nm:"Solo Mind",        desc:"Score 1k+ without using assists"},
+  {id:"speed_demon",  ic:"⚡",nm:"Speed Demon",      desc:"Answer in under 1 second"},
+  // Modes
+  {id:"insane_win",   ic:"😈",nm:"Insanity",         desc:"Score 500+ on Insane"},
+  {id:"chain_10",     ic:"🔗",nm:"Chain Reaction",   desc:"10 chain words in a row"},
+  {id:"chain_25",     ic:"⛓️",nm:"Unbreakable",      desc:"25 chain words in a row"},
+  {id:"zen_100",      ic:"🧘",nm:"Inner Peace",      desc:"100 words in Zen mode",                 test:s=>(s.zenWords||0)>=100},
+  {id:"survival_500", ic:"🫀",nm:"Survivor",         desc:"Score 500 in Survival mode",            test:s=>(s.survivalBest||0)>=500},
+  {id:"blitz_300",    ic:"⚡",nm:"Blitz King",       desc:"Score 300 in Blitz mode",               test:s=>(s.blitzBest||0)>=300},
+  {id:"beat_ai",      ic:"🤖",nm:"AI Slayer",        desc:"Beat the AI opponent"},
+  {id:"daily",        ic:"📅",nm:"Daily Done",       desc:"Complete a daily challenge"},
+  {id:"daily_7",      ic:"📆",nm:"Weekly Warrior",   desc:"7-day play streak",                     test:s=>(s.loginStreak||0)>=7},
+  {id:"daily_30",     ic:"🗓️",nm:"Monthly Legend",  desc:"30-day play streak",                    test:s=>(s.loginStreak||0)>=30},
+  // Fun
+  {id:"games_10",     ic:"🎮",nm:"Gamer",            desc:"10 games played",                       test:s=>(s.gamesPlayed||0)>=10},
+  {id:"games_50",     ic:"🕹️",nm:"Veteran",         desc:"50 games played",                       test:s=>(s.gamesPlayed||0)>=50},
+  {id:"games_100",    ic:"🎖️",nm:"Legend",          desc:"100 games played",                      test:s=>(s.gamesPlayed||0)>=100},
+  {id:"all_skins",    ic:"🌈",nm:"Collector",        desc:"Unlock all skins",                      test:s=>(s.skins||[]).length>=SKINS.length},
+  {id:"comeback",     ic:"💪",nm:"Comeback",         desc:"Win with 1 life remaining"},
+];
+
+/* ─────────────────────────────────────────────
+   AI TAUNTS
+───────────────────────────────────────────── */
+const AI_TAUNTS=[
+  "Is that the best you can do? 🤖","My circuits are faster than your fingers!","Error 404: Skill not found 😂",
+  "Processing… you're losing! 📊","I've analyzed 1M words. You've thought of HOW many?","Beep boop. You're doomed. 🤖",
+  "My vocabulary: unlimited. Yours: questionable.","Shall I go easy on you? 😏","That word? Really?",
+  "I predict you'll fail in 3… 2… 1…","Even a thesaurus would be embarrassed. 📚","Calculating your defeat… done.",
+  "Nice try, human.","You spelled that correctly! ...That's it, that's the compliment.","Statistics say you lose."
+];
+const AI_WORRY=["Hmm… this human is decent. 😤","W-wait, that was a good word!","Processing… nervous. 🤔",
+  "Error: Unexpectedly competent opponent!","Maybe I underestimated you. MAYBE.","Recalculating strategy…"];
+
+/* ─────────────────────────────────────────────
+   SAVE / PERSIST
+───────────────────────────────────────────── */
+const SAVE_KEY="wordbombSave_v4",DICT_KEY="wordbombDict_v1";
+let save=loadSave();
+function loadSave(){
+  try{const r=localStorage.getItem(SAVE_KEY);if(r)return JSON.parse(r);}catch(e){}
+  return{coins:0,best:0,totalWords:0,gamesPlayed:0,longestWord:"",upgrades:{},muted:false,achievements:{},dailyBest:{},bestByMode:{},skins:["default"],equippedSkin:"default",loginStreak:0,lastLoginDate:"",rareLetterUses:0,bestLongStreak:0,zenWords:0,survivalBest:0,blitzBest:0,leaderboard:[],playHistory:{}};
+}
+function persist(){save.muted=muted;localStorage.setItem(SAVE_KEY,JSON.stringify(save));}
+
+/* ─────────────────────────────────────────────
+   DAILY LOGIN STREAK
+───────────────────────────────────────────── */
+function updateLoginStreak(){
+  const today=todayKey();
+  if(save.lastLoginDate===today)return;
+  const yesterday=new Date();yesterday.setDate(yesterday.getDate()-1);
+  const yKey=`${yesterday.getFullYear()}-${String(yesterday.getMonth()+1).padStart(2,'0')}-${String(yesterday.getDate()).padStart(2,'0')}`;
+  if(save.lastLoginDate===yKey)save.loginStreak=(save.loginStreak||0)+1;
+  else if(save.lastLoginDate!==today)save.loginStreak=1;
+  save.lastLoginDate=today;
+  save.playHistory=save.playHistory||{};save.playHistory[today]=true;
+  persist();
+}
+
+/* ─────────────────────────────────────────────
+   DICTIONARY
+───────────────────────────────────────────── */
+let dictionary=new Set(),dictArr=[],dictLoaded=false;
+function parseDictText(txt){return txt.replace(/\r/g,"\n").split(/\n+/).map(w=>w.trim().toLowerCase()).filter(w=>w&&/^[a-z]+$/.test(w));}
+function applyWords(words,src){dictionary=new Set(words);dictArr=words;dictLoaded=true;setDictStatus(`✅ ${dictionary.size.toLocaleString()} words (${src})`,'ok');}
+async function loadDictionary(){
+  try{const cached=localStorage.getItem(DICT_KEY);if(cached){const arr=JSON.parse(cached);if(Array.isArray(arr)&&arr.length){applyWords(arr,"cache");return;}}}catch(e){}
+  try{
+    setDictStatus("⏳ Fetching dictionary.txt…");
+    const res=await fetch("./dictionary.txt");if(!res.ok)throw new Error();
+    const words=parseDictText(await res.text());applyWords(words,"file");
+    try{localStorage.setItem(DICT_KEY,JSON.stringify(words));}catch(e){}
+  }catch(e){setDictStatus("⚠️ No dictionary found. Upload a .txt file below.",'error');}
+}
+async function handleDictUpload(file){
+  if(!file)return;setDictStatus(`📖 Reading ${file.name}…`);
+  const text=await file.text();const words=parseDictText(text);
+  if(!words.length){setDictStatus("⚠️ No valid words found.",'error');return;}
+  applyWords(words,file.name);
+  try{localStorage.setItem(DICT_KEY,JSON.stringify(words));}catch(e){setDictStatus("✅ Loaded (too large to cache)",'ok');}
+}
+function clearCachedDict(){localStorage.removeItem(DICT_KEY);dictionary=new Set();dictArr=[];dictLoaded=false;setDictStatus("🗑 Cache cleared.",'error');}
+function setDictStatus(t,cls=""){const el=$("dictStatus");el.textContent=t;el.className='dict-status'+(cls?' '+cls:'');}
+
+/* ─────────────────────────────────────────────
+   AUDIO
+───────────────────────────────────────────── */
+let actx=null,muted=save.muted||false;
+function beep(freq=440,dur=.1,type="sine",vol=.1){
+  if(muted)return;
+  try{if(!actx)actx=new(window.AudioContext||window.webkitAudioContext)();
+    const o=actx.createOscillator(),g=actx.createGain();o.type=type;o.frequency.value=freq;g.gain.value=vol;
+    o.connect(g);g.connect(actx.destination);o.start();g.gain.exponentialRampToValueAtTime(.0001,actx.currentTime+dur);o.stop(actx.currentTime+dur);
+  }catch(e){}
+}
+const sfx={
+  good:  ()=>{beep(660,.07,"triangle",.1);setTimeout(()=>beep(880,.1,"triangle",.1),55);},
+  great: ()=>{beep(523,.07,"square",.09);setTimeout(()=>beep(659,.07,"square",.09),65);setTimeout(()=>beep(784,.12,"square",.09),130);},
+  epic:  ()=>{[523,659,784,1047].forEach((f,i)=>setTimeout(()=>beep(f,.1,"square",.09),i*70));},
+  bad:   ()=>{beep(150,.25,"sawtooth",.15);},
+  tick:  ()=>{beep(1200,.03,"square",.04);},
+  boom:  ()=>{beep(100,.5,"sawtooth",.2);setTimeout(()=>beep(70,.5,"sawtooth",.18),100);},
+  coin:  ()=>{beep(988,.05,"triangle",.09);setTimeout(()=>beep(1318,.09,"triangle",.09),45);},
+  unlock:()=>{beep(523,.08,"square",.1);setTimeout(()=>beep(659,.08,"square",.1),80);setTimeout(()=>beep(1047,.15,"square",.1),160);},
+  levelup:()=>{[523,659,784,1047,1319].forEach((f,i)=>setTimeout(()=>beep(f,.1,"triangle",.1),i*60));},
+};
+
+/* ─────────────────────────────────────────────
+   STATE
+───────────────────────────────────────────── */
+let currentCombo="",lives=5,longStreak=0,sessionBestStreak=0;
+let multiplier=1,round=0,score=0,chainCount=0,sessionWords=0;
+let sessionCoinsEarned=0,sessionUsedAssist=false,sessionRareCount=0;
+let lettersUsed=new Set(),inventory={hint:0,skip:0,freeze:0,bomb:0};
+let timerDuration=5,currentTime=5,interval=null,frozen=false;
+let gameActive=false,diff="medium",mode="classic",chainLetter="",lastCombo="";
+let dailyRng=Math.random,pendingTimeBonus=0;
+let prevLevel=1,aiLives=5,aiInterval=null,aiScore=0;
+let roundStartTime=0,sessionLettersUsed=new Set();
+const usedWords=new Set();
+
+/* ─────────────────────────────────────────────
+   SEEDED RNG
+───────────────────────────────────────────── */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=a;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296;};}
+function todayKey(){const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+function seedFromStr(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
+
+/* ─────────────────────────────────────────────
+   $ REFS
+───────────────────────────────────────────── */
+const $=id=>document.getElementById(id);
+const comboEl=$("combo"),timerBar=$("timerBar"),timerOuter=$("timerOuter");
+const inputEl=$("wordInput"),msgEl=$("message"),coinsEl=$("coins");
+const scoreEl=$("score"),streakEl=$("streak"),multEl=$("multiplier");
+const heartsEl=$("hearts"),bestEl=$("best"),charEl=$("character");
+const charGlow=$("charGlow"),charFire=$("charFire");
+const alphabetEl=$("alphabet"),toastEl=$("toast");
+const hintBtn=$("hintBtn"),skipBtn=$("skipBtn"),freezeBtn=$("freezeBtn"),bombBtn=$("bombBtn");
+const muteBtn=$("muteBtn"),diffRow=$("diffRow");
+const shopGridEl=$("shopGrid");
+const gameOverOverlay=$("gameOverOverlay");
+const levelValEl=$("levelVal"),levelBar=$("levelBar");
+const chainBadge=$("chainBadge"),chainStart=$("chainStart");
+const chainLabelEl=$("chainLabel"),chainValEl=$("chainVal");
+const timerText=$("timerText");
+const vsWrap=$("vsSectionWrap");
+
+/* ─────────────────────────────────────────────
+   TOAST & MSG
+───────────────────────────────────────────── */
+let toastTimer=null;
+function toast(t,dur=2200){toastEl.textContent=t;toastEl.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>toastEl.classList.remove("show"),dur);}
+function msg(t,kind=""){msgEl.textContent=t;msgEl.className="message"+(kind?" "+kind:"");}
+
+/* ─────────────────────────────────────────────
+   CONFETTI
+───────────────────────────────────────────── */
+function spawnConfetti(n=30){
+  for(let i=0;i<n;i++){
+    const c=document.createElement('div');c.className='confetti-piece';
+    const colors=['#fbbf24','#f472b6','#818cf8','#34d399','#60a5fa','#f97316'];
+    c.style.cssText=`left:${Math.random()*100}%;background:${colors[Math.floor(Math.random()*colors.length)]};border-radius:${Math.random()>.5?'50%':'2px'};--cf-x:${(Math.random()-0.5)*400}px;--cf-dur:${(Math.random()*1.5+1.2).toFixed(2)}s;--cf-del:${(Math.random()*.5).toFixed(2)}s`;
+    document.body.appendChild(c);setTimeout(()=>c.remove(),(3000));
+  }
+}
+
+/* ─────────────────────────────────────────────
+   FLOATERS
+───────────────────────────────────────────── */
+function floatText(t,color){
+  const f=document.createElement("div");f.className="floater";f.textContent=t;
+  f.style.color=color||"#4ade80";f.style.left="50%";f.style.top="20px";
+  $("arena").appendChild(f);setTimeout(()=>f.remove(),950);
+}
+
+/* ─────────────────────────────────────────────
+   LEVEL SYSTEM
+───────────────────────────────────────────── */
+function getLevel(words){return 1+Math.floor(Math.sqrt((words||0)/5));}
+function levelThreshold(lv){return 5*lv*lv;}
+function updateLevel(){
+  const words=save.totalWords||0;
+  const lv=getLevel(words);
+  const prevThresh=levelThreshold(lv-1<1?0:lv-1);
+  const nextThresh=levelThreshold(lv);
+  const pct=Math.min(100,((words-prevThresh)/(nextThresh-prevThresh))*100);
+  levelValEl.textContent=`Lv ${lv} (${words}/${nextThresh})`;
+  levelBar.style.width=pct+"%";
+  if(lv>prevLevel&&prevLevel>0&&gameActive){showLevelUp(lv);prevLevel=lv;}
+  prevLevel=lv;
+}
+function showLevelUp(lv){
+  const banner=$("levelUpBanner");
+  $("luTitle").textContent="⬆ LEVEL UP!";
+  $("luSub").textContent=`You reached Level ${lv}!`;
+  banner.classList.add("show");
+  $("levelVal").closest(".stat-card").classList.add("levelup-flash");
+  sfx.levelup();spawnConfetti(20);
+  setTimeout(()=>{banner.classList.remove("show");$("levelVal").closest(".stat-card").classList.remove("levelup-flash");},2200);
+}
+
+/* ─────────────────────────────────────────────
+   UI UPDATES
+───────────────────────────────────────────── */
+function updateHearts(){heartsEl.textContent=lives>0?"❤️".repeat(Math.min(lives,10))+(lives>10?`+${lives-10}`:""):"💀";}
+function updateMultiplier(){const bonus=(save.upgrades.mult||0)*.5;multiplier=parseFloat((1+bonus+Math.floor(longStreak/3)).toFixed(1));multEl.textContent=multiplier+"x";}
+function updateFire(){charFire.classList.toggle("active",longStreak>=3);charGlow.classList.toggle("active",longStreak>=5);}
+function updateCoins(){coinsEl.textContent=save.coins;}
+function updateBest(){bestEl.textContent=save.best;}
+function updateScore(){scoreEl.textContent=score;}
+function updateChain(){
+  if(mode==="chain"&&gameActive){
+    chainLabelEl.textContent="Start with";chainValEl.textContent=chainLetter?chainLetter.toUpperCase():"any";
+    chainBadge.style.display="inline-flex";chainStart.textContent=chainLetter?chainLetter.toUpperCase():"any";
+    chainBadge.classList.toggle("highlight",!!chainLetter);
+  } else {
+    chainBadge.style.display="none";chainLabelEl.textContent="Mode";
+    const ml={classic:"🎯 Classic",zen:"🧘 Zen",sudden:"☠️ Sudden",chain:"🔗 Chain",blitz:"⚡ Blitz",survival:"🫀 Survival",vs_ai:"🤖 vs AI",daily:"📅 Daily"};
+    chainValEl.textContent=ml[mode]||mode;
+  }
+}
+function updateDiffRow(){
+  const d=DIFFICULTY[diff];
+  const ml={classic:"Classic",zen:"Zen",sudden:"Sudden",chain:"Chain",blitz:"Blitz",survival:"Survival",vs_ai:"vs AI",daily:"Daily"};
+  diffRow.innerHTML=`<span class="pill ${d.pill}">${d.label}</span><span class="pill pill-mode">${ml[mode]||mode}</span>`;
+}
+function updateAlphabet(){
+  alphabetEl.innerHTML="";
+  for(let i=0;i<26;i++){
+    const c=String.fromCharCode(97+i);
+    const d=document.createElement("div");d.className="letter-badge"+(lettersUsed.has(c)?" used":"");d.textContent=c.toUpperCase();
+    alphabetEl.appendChild(d);
+  }
+}
+function updateInvBtns(){
+  const on=gameActive&&dictLoaded;
+  hintBtn.disabled=!on;skipBtn.disabled=!on;freezeBtn.disabled=!on;bombBtn.disabled=!on;
+  hintBtn.innerHTML=`💡 Hint ${inventory.hint>0?`<b style="color:#fbbf24">(${inventory.hint})</b>`:"(10c)"}`;
+  skipBtn.innerHTML=`⏭ Skip ${inventory.skip>0?`<b style="color:#60a5fa">(${inventory.skip})</b>`:"(15c)"}`;
+  freezeBtn.innerHTML=`❄️ Freeze ${inventory.freeze>0?`<b style="color:#67e8f9">(${inventory.freeze})</b>`:"(20c)"}`;
+  bombBtn.innerHTML=`💣 Bomb ${inventory.bomb>0?`<b style="color:#f87171">(${inventory.bomb})</b>`:"(30c)"}`;
+}
+function updateTimerBar(){const pct=Math.max(0,(currentTime/timerDuration)*100);timerBar.style.width=pct+"%";timerText.textContent=gameActive&&mode!=="zen"?currentTime.toFixed(1)+"s":"—";}
+function updateBonusMeter(len){
+  for(let i=0;i<8;i++){
+    const node=$(`bn${i}`);const threshold=i+3;
+    if(len>0&&len>=threshold){node.classList.add(i>=5?"super":"lit");}
+    else{node.classList.remove("lit","super");}
+  }
+  $("bonusMeterWrap").style.opacity=len>0?1:.5;
+}
+function updateDailyStreakBadge(){
+  $("dailyStreakBadge").textContent=`🔥 Login streak: ${save.loginStreak||1}`;
+}
+function updateVsHP(){
+  if(mode!=="vs_ai")return;
+  const maxLives=Number($("lifeSelect").value)+(save.upgrades.life||0);
+  const playerPct=Math.max(0,(lives/maxLives)*100);
+  const aiPct=Math.max(0,(aiLives/maxLives)*100);
+  $("vsPlayerHP").style.width=playerPct+"%";
+  $("vsAIHP").style.width=aiPct+"%";
+  $("vsPlayerHPText").textContent=`❤️ ${lives} lives`;
+  $("vsAIHPText").textContent=`❤️ ${aiLives} lives`;
+}
+
+/* ─────────────────────────────────────────────
+   AI OPPONENT
+───────────────────────────────────────────── */
+const AI_NAMES=["R0B0-1337","NeuroBot","LEXIS-9","ByteGenius","W0RD-5K4N","SyntaxAI"];
+let aiName="BOT",aiThinkTimer=null;
+function startAI(){
+  aiName=AI_NAMES[Math.floor(Math.random()*AI_NAMES.length)];
+  $("aiName").textContent=aiName;
+  vsWrap.style.display="block";
+  scheduleAIWord();
+}
+function stopAI(){clearTimeout(aiThinkTimer);aiThinkTimer=null;$("aiThinking").textContent="";vsWrap.style.display="none";}
+function scheduleAIWord(){
+  if(!gameActive||mode!=="vs_ai")return;
+  // AI speed scales with round: starts at 4.5s, gets faster
+  const aiSpeed=Math.max(1.5,4.5-round*.07+(Math.random()-.5));
+  $("aiThinking").textContent="thinking…";
+  aiThinkTimer=setTimeout(()=>{
+    if(!gameActive||mode!=="vs_ai")return;
+    $("aiThinking").textContent="";
+    playAIWord();
+  },aiSpeed*1000);
+}
+function playAIWord(){
+  if(!gameActive||mode!=="vs_ai")return;
+  const min=DIFFICULTY[diff].minLen;
+  const cands=[];
+  for(const w of dictArr){if(w.length>=min&&w.includes(currentCombo)&&!usedWords.has(w)){cands.push(w);if(cands.length>80)break;}}
+  if(!cands.length){showAITaunt("No words found for this one. Lucky you… for now.");return;}
+  // Pick a word — harder difficulties pick longer words
+  let pick;
+  if(diff==="insane"||diff==="hard"){
+    cands.sort((a,b)=>b.length-a.length);pick=cands[Math.floor(Math.random()*Math.min(5,cands.length))];
+  } else {
+    pick=cands[Math.floor(Math.random()*Math.min(15,cands.length))];
+  }
+  aiScore+=pick.length*pick.length*DIFFICULTY[diff].scoreMult;
+  usedWords.add(pick);
+  // Show AI played a word
+  const banner=document.createElement("div");banner.className="vs-banner";
+  banner.innerHTML=`<span style="color:var(--text2)">${aiName} played:</span><span class="ai-word">${pick.toUpperCase()}</span><span style="color:var(--text2)">+${pick.length*pick.length} pts</span>`;
+  $("arena").insertBefore(banner,$("timerOuter").nextSibling);
+  setTimeout(()=>banner.remove(),2200);
+  if(Math.random()<.35)showAITaunt(AI_TAUNTS[Math.floor(Math.random()*AI_TAUNTS.length)]);
+  // AI hurts player — they lose time (or they get to steal a life occasionally on hard)
+  if(diff==="insane"&&Math.random()<.15){lives--;updateHearts();updateVsHP();if(lives<=0){gameOver();return;}}
+  scheduleAIWord();
+}
+function showAITaunt(text){
+  const el=$("aiTaunt");el.textContent=text;el.classList.add("show");
+  const el2=$("aiTauntInline");el2.textContent=text;el2.classList.add("show");
+  setTimeout(()=>{el.classList.remove("show");el2.classList.remove("show");},3500);
+}
+
+/* ─────────────────────────────────────────────
+   ACHIEVEMENTS
+───────────────────────────────────────────── */
+function unlockAch(id){
+  save.achievements=save.achievements||{};if(save.achievements[id])return;
+  const a=ACHIEVEMENTS.find(x=>x.id===id);if(!a)return;
+  save.achievements[id]=Date.now();persist();
+  toast(`🏅 Achievement: ${a.nm}`);sfx.unlock();renderAchievements();
+}
+function checkAutoAch(){for(const a of ACHIEVEMENTS)if(a.test&&a.test(save))unlockAch(a.id);}
+function renderAchievements(){
+  const got=save.achievements||{};const unlocked=Object.keys(got).length;
+  const header=`<div style="font-size:.75rem;color:var(--text3);margin-bottom:8px;font-weight:700">${unlocked}/${ACHIEVEMENTS.length} unlocked</div>`;
+  tabAch.innerHTML=header+ACHIEVEMENTS.map(a=>{
+    const owned=!!got[a.id];
+    return`<div class="ach-item ${owned?"unlocked":"locked"}"><span class="ach-ic">${a.ic}</span><div><div class="ach-nm">${a.nm}</div><div class="ach-desc">${a.desc}${owned?" ✓":""}</div></div></div>`;
+  }).join("");
+}
+
+/* ─────────────────────────────────────────────
+   CALENDAR HEATMAP
+───────────────────────────────────────────── */
+function renderCalendar(){
+  const history=save.playHistory||{};
+  const today=new Date();const todayStr=todayKey();
+  // Build 13 weeks grid ending today
+  const days=91;const startDate=new Date(today);startDate.setDate(startDate.getDate()-days+1);
+  let weeks=[],week=[];
+  for(let i=0;i<days;i++){
+    const d=new Date(startDate);d.setDate(startDate.getDate()+i);
+    const key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const played=!!history[key];
+    const isToday=key===todayStr;
+    week.push({key,played,isToday,label:`${d.toDateString()}`});
+    if(week.length===7){weeks.push(week);week=[];}
+  }
+  if(week.length)weeks.push(week);
+  const totalDays=Object.keys(history).length;
+  tabCalendar.innerHTML=`<div class="cal-label">Played ${totalDays} day${totalDays!==1?"s":""} total · ${save.loginStreak||0}-day streak</div>
+    <div class="cal-grid">${weeks.map(w=>`<div class="cal-week">${w.map(d=>`<div class="cal-day${d.played?" played":""}${d.isToday?" today":""}" title="${d.label}${d.played?" · Played":""}"></div>`).join("")}</div>`).join("")}</div>`;
+}
+
+/* ─────────────────────────────────────────────
+   SKINS
+───────────────────────────────────────────── */
+function renderSkins(){
+  const owned=save.skins||["default"];const equipped=save.equippedSkin||"default";
+  tab2Skins.innerHTML=`<div style="font-size:.7rem;color:var(--text3);margin-bottom:8px">Click to equip · Unlock with coins</div><div class="skins-grid">${SKINS.map(s=>{
+    const isOwned=owned.includes(s.id);const isEquipped=equipped===s.id;
+    return`<div class="skin-card ${isEquipped?"equipped":""} ${!isOwned?"locked":""}" onclick="selectSkin('${s.id}')">
+      <span class="skin-emoji">${s.em}</span>
+      <div class="skin-name">${s.nm}</div>
+      ${isOwned?`<div class="skin-owned">${isEquipped?"✓ Equipped":"Owned"}</div>`:`<div class="skin-cost">💰 ${s.cost}</div>`}
+    </div>`;
+  }).join("")}</div>`;
+}
+window.selectSkin=function(id){
+  const s=SKINS.find(x=>x.id===id);if(!s)return;
+  const owned=save.skins||["default"];
+  if(!owned.includes(id)){
+    if(save.coins<s.cost){toast(`Need 💰${s.cost} coins!`);return;}
+    save.coins-=s.cost;save.skins=[...owned,id];persist();updateCoins();toast(`Unlocked ${s.nm} skin! ${s.em}`);sfx.unlock();
+    checkAutoAch();
+  }
+  save.equippedSkin=id;persist();
+  charEl.textContent=s.em;renderSkins();
+};
+
+/* ─────────────────────────────────────────────
+   LEADERBOARD
+───────────────────────────────────────────── */
+function saveToLeaderboard(name,score,modeLabel){
+  save.leaderboard=save.leaderboard||[];
+  save.leaderboard.push({name:name||"Anonymous",score,mode:modeLabel,date:todayKey()});
+  save.leaderboard.sort((a,b)=>b.score-a.score);
+  save.leaderboard=save.leaderboard.slice(0,20);
+  persist();renderLeaderboard();
+}
+function renderLeaderboard(){
+  const lb=save.leaderboard||[];
+  if(!lb.length){tab2Lb.innerHTML=`<div style="color:var(--text3);font-size:.82rem;padding:8px">No scores yet. Play and save your score!</div>`;return;}
+  const medals=["🥇","🥈","🥉"];
+  tab2Lb.innerHTML=lb.slice(0,10).map((e,i)=>`<div class="lb-row">
+    <span class="lb-rank">${medals[i]||"#"+(i+1)}</span>
+    <span class="lb-name">${e.name}</span>
+    <span class="lb-score">${e.score.toLocaleString()}</span>
+    <span class="lb-mode">${e.mode}</span>
+  </div>`).join("");
+}
+const tab2Skins=$("tab2Skins"),tab2Lb=$("tab2Lb");
+
+/* ─────────────────────────────────────────────
+   COMBO PICKER
+───────────────────────────────────────────── */
+function hasAvailableWord(combo){
+  const min=DIFFICULTY[diff].minLen;
+  for(const w of dictArr){if(w.length>=min&&w.includes(combo)&&!usedWords.has(w))return true;}
+  return false;
+}
+function pickCombo(){
+  const pool=COMBO_POOLS[diff];const rng=mode==="daily"?dailyRng:Math.random;
+  for(let tries=0;tries<40;tries++){
+    const c=pool[Math.floor(rng()*pool.length)];
+    if(!dictLoaded||hasAvailableWord(c)){currentCombo=c;break;}
+    currentCombo=c;
+  }
+  lastCombo=currentCombo;
+  comboEl.textContent=currentCombo.toUpperCase();
+  comboEl.classList.toggle("rare",currentCombo.length>=4);
+  comboEl.classList.add("pulse");setTimeout(()=>comboEl.classList.remove("pulse"),350);
+  updateBonusMeter(0);
+}
+
+/* ─────────────────────────────────────────────
+   TIMER / ROUND
+───────────────────────────────────────────── */
+function startRound(){
+  round++;roundStartTime=Date.now();
+  let base=DIFFICULTY[diff].time+(save.upgrades.slow||0)*.5+(pendingTimeBonus||0);
+  if(mode==="blitz")base=3;
+  if(mode==="survival")base=Math.max(1.5,base-round*.05);
+  pendingTimeBonus=0;
+  timerDuration=Math.max(1.2,base-round*.04);
+  if(mode==="blitz")timerDuration=3;
+  currentTime=timerDuration;frozen=false;
+  timerOuter.classList.remove("frozen");
+  pickCombo();inputEl.value="";inputEl.disabled=false;inputEl.focus();
+  updateTimerBar();updateChain();clearInterval(interval);
+  let lastTick=-1;
+  interval=setInterval(()=>{
+    if(frozen||mode==="zen")return;
+    currentTime-=.05;updateTimerBar();
+    const whole=Math.ceil(currentTime);
+    if(whole<=3&&whole!==lastTick&&whole>0){sfx.tick();lastTick=whole;}
+    if(currentTime<=0){clearInterval(interval);loseLife("⏰ Time's up!");}
+  },50);
+  if(mode==="zen")timerBar.style.width="100%";
+  if(mode==="survival"){
+    // HP drain every 8 seconds
+    if(round%8===0&&round>0){lives--;updateHearts();updateVsHP();if(lives<=0){gameOver();return;}}
+  }
+  if(mode==="vs_ai")scheduleAIWord();
+}
+function revealMissed(){
+  if(!lastCombo)return;
+  const min=DIFFICULTY[diff].minLen,found=[];
+  for(const w of dictArr){if(w.length>=min&&w.includes(lastCombo)&&!usedWords.has(w)){found.push(w);if(found.length>=30)break;}}
+  tabMissed.innerHTML=found.length
+    ?`<div style="color:var(--text3);font-size:.75rem;margin-bottom:6px">Words for "<b style="color:var(--text2)">${lastCombo}</b>":</div>`+found.map(w=>`<span class="word-chip${w.length>=6?" long":""}">${w}</span>`).join("")
+    :`<span style="color:var(--text3);font-size:.82rem">No unused words for "${lastCombo}".</span>`;
+}
+function loseLife(reason){
+  clearInterval(interval);
+  if(mode==="sudden"){msg(reason,"bad");gameOver();return;}
+  if(mode==="zen"){msg(reason+" (Zen — no penalty)","info");setTimeout(startRound,600);return;}
+  lives--;updateHearts();updateVsHP();longStreak=0;chainCount=0;updateMultiplier();updateFire();streakEl.textContent="0";
+  charEl.classList.remove("hit");void charEl.offsetWidth;charEl.classList.add("hit");
+  const g=$("game");g.classList.remove("shake");void g.offsetWidth;g.classList.add("shake");
+  setTimeout(()=>g.classList.remove("shake"),400);
+  sfx.bad();msg(reason,"bad");
+  if(mode==="vs_ai")showAITaunt(AI_TAUNTS[Math.floor(Math.random()*AI_TAUNTS.length)]);
+  if(lives<=0){gameOver();return;}
+  setTimeout(startRound,700);
+}
+function gameOver(){
+  gameActive=false;clearInterval(interval);stopAI();
+  inputEl.disabled=true;comboEl.textContent="💥";sfx.boom();charEl.textContent="😵";
+  save.gamesPlayed=(save.gamesPlayed||0)+1;
+  const modeKey=`${mode}:${diff}`;
+  save.bestByMode=save.bestByMode||{};
+  if(!save.bestByMode[modeKey]||score>save.bestByMode[modeKey])save.bestByMode[modeKey]=score;
+  if(mode==="daily"){const k=`${todayKey()}:${diff}`;save.dailyBest=save.dailyBest||{};if(!save.dailyBest[k]||score>save.dailyBest[k])save.dailyBest[k]=score;unlockAch("daily");}
+  if(mode==="zen"&&sessionWords>=100){save.zenWords=(save.zenWords||0)+sessionWords;if(save.zenWords>=100)unlockAch("zen_100");}
+  if(mode==="survival"&&score>=(save.survivalBest||0)){save.survivalBest=score;if(score>=500)unlockAch("survival_500");}
+  if(mode==="blitz"&&score>=(save.blitzBest||0)){save.blitzBest=score;if(score>=300)unlockAch("blitz_300");}
+  if(mode==="vs_ai"&&aiLives<=0)unlockAch("beat_ai");
+  if(diff==="insane"&&score>=500)unlockAch("insane_win");
+  if(score>=1000&&!sessionUsedAssist)unlockAch("no_hints");
+  if(lives===1)unlockAch("comeback");
+  if(save.bestLongStreak<sessionBestStreak){save.bestLongStreak=sessionBestStreak;}
+  const isNewBest=score>(save.best||0);if(isNewBest)save.best=score;
+  persist();updateBest();checkAutoAch();revealMissed();renderStats();updateLevel();updateChain();updateInvBtns();
+  showGameOver(isNewBest);
+}
+function showGameOver(isNewBest){
+  $("goScore").textContent=score.toLocaleString();
+  const msgs=[[0,"Better luck next time!","😅"],[100,"Getting warmer!","🌡️"],[500,"Solid run!","😊"],[1500,"Impressive!","🎉"],[5000,"Incredible!","🏆"],[10000,"Legendary! 🔥","🌟"],[25000,"GODLIKE 🌌","👑"]];
+  let title="",emoji="💥";for(const [t,m,e] of msgs){if(score>=t){title=m;emoji=e;}}
+  $("goTitle").textContent=title;$("goEmoji").textContent=emoji;
+  $("goSub").textContent=`${sessionWords} word${sessionWords!==1?"s":""} · ${DIFFICULTY[diff].label} · ${mode}${mode==="vs_ai"?` · AI: ${aiScore} pts`:""}`;
+  $("goNewBest").style.display=isNewBest?"inline-flex":"none";
+  $("goWords").textContent=sessionWords;$("goCoins").textContent="+"+sessionCoinsEarned;
+  $("goStreak").textContent=sessionBestStreak;
+  const wordArr=[...usedWords];
+  $("goLongest").textContent=wordArr.length?wordArr.reduce((a,b)=>b.length>a.length?b:a,"—"):"—";
+  $("goLetters").textContent=sessionLettersUsed.size;
+  $("goLevel").textContent=`Lv ${getLevel(save.totalWords)}`;
+  gameOverOverlay.classList.add("show");
+  if(isNewBest)spawnConfetti(40);
+}
+
+/* ─────────────────────────────────────────────
+   SUBMIT WORD
+───────────────────────────────────────────── */
+function submitWord(){
+  if(!gameActive)return;
+  const word=inputEl.value.trim().toLowerCase();
+  if(!word)return;
+  const minLen=DIFFICULTY[diff].minLen;
+  if(word.length<minLen)return msg(`Min ${minLen} letters`,"bad");
+  if(!/^[a-z]+$/.test(word))return msg("Letters only","bad");
+  if(!word.includes(currentCombo))return msg(`Must contain "${currentCombo}"`,"bad");
+  if(mode==="chain"&&chainLetter&&word[0]!==chainLetter)return msg(`Must start with "${chainLetter.toUpperCase()}"`,"bad");
+  if(usedWords.has(word))return msg("Already used!","bad");
+  if(!dictLoaded)return msg("Dictionary not loaded","bad");
+  if(!dictionary.has(word))return msg("Not in dictionary","bad");
+
+  // Speed achievement
+  const elapsed=(Date.now()-roundStartTime)/1000;
+  if(elapsed<1)unlockAch("speed_demon");
+
+  usedWords.add(word);sessionWords++;
+  save.totalWords=(save.totalWords||0)+1;
+  if(word.length>(save.longestWord||"").length)save.longestWord=word;
+
+  let newLetters=0;
+  for(const c of word){if(!lettersUsed.has(c)){lettersUsed.add(c);newLetters++;}sessionLettersUsed.add(c);}
+  updateAlphabet();updateBonusMeter(word.length);
+
+  if(lettersUsed.size===26){
+    save.coins+=50;lives=Math.min(lives+1,99);
+    lettersUsed.clear();updateAlphabet();updateHearts();updateVsHP();
+    toast("🔤 Full alphabet! +50 coins +1 life");sfx.epic();unlockAch("alphabet");spawnConfetti(25);
+  }
+
+  if(word.length>=6)longStreak++;else longStreak=0;
+  if(longStreak>sessionBestStreak)sessionBestStreak=longStreak;
+  if(longStreak>=5)unlockAch("streak_5");
+  updateMultiplier();updateFire();streakEl.textContent=longStreak;
+
+  if(mode==="chain"){chainCount++;chainLetter=word[word.length-1];if(chainCount>=10)unlockAch("chain_10");if(chainCount>=25)unlockAch("chain_25");}
+
+  let rareBonus=0;const isRare=/[qzxj]/.test(word);
+  if(isRare){for(const c of word)if("qzxj".includes(c))rareBonus+=3;unlockAch("rare_qzxj");save.rareLetterUses=(save.rareLetterUses||0)+1;spawnConfetti(15);}
+
+  let timeBonus=word.length>6?(word.length-6)*.4:0;
+  const xpMult=1+(save.upgrades.xp||0)*.2;
+  const pts=Math.round(word.length*word.length*multiplier*DIFFICULTY[diff].scoreMult);
+  const coinsEarned=Math.round(Math.max(1,Math.floor(word.length/2))*multiplier)+rareBonus;
+  score+=pts;save.coins+=coinsEarned;sessionCoinsEarned+=coinsEarned;
+  updateScore();updateCoins();persist();checkAutoAch();updateLevel();
+
+  // AI vs — if we're ahead, AI worries
+  if(mode==="vs_ai"&&score>aiScore&&Math.random()<.4)showAITaunt(AI_WORRY[Math.floor(Math.random()*AI_WORRY.length)]);
+
+  const skin=SKINS.find(s=>s.id===(save.equippedSkin||"default"))||SKINS[0];
+  charEl.textContent=longStreak>=5?"🤩":longStreak>=3?"😄":skin.em;
+  charEl.classList.remove("happy");void charEl.offsetWidth;charEl.classList.add("happy");
+  setTimeout(()=>{charEl.textContent=skin.em;charEl.classList.remove("happy");},450);
+
+  floatText(`+${pts}`,longStreak>=5?"#f472b6":longStreak>=3?"#fbbf24":"#4ade80");
+  if(isRare)floatText("💎 RARE!","#c4b5fd");
+  if(word.length>=10)sfx.epic();else if(word.length>=7)sfx.great();else sfx.good();
+  sfx.coin();
+
+  const bits=[];
+  if(newLetters>0)bits.push(`+${newLetters} letters`);
+  if(rareBonus>0)bits.push(`💎 +${rareBonus}`);
+  if(timeBonus>0)bits.push(`⏱ +${timeBonus.toFixed(1)}s`);
+  msg(`✓ +${coinsEarned}c · +${pts}pts${bits.length?" · "+bits.join(" · "):""}${word.length>=10?" 🔥🔥":""}`, "good");
+  if(timeBonus>0)pendingTimeBonus=timeBonus;
+  renderUsed();startRound();
+}
+
+/* ─────────────────────────────────────────────
+   POWER-UPS
+───────────────────────────────────────────── */
+function useHint(){
+  if(!gameActive)return;
+  if(inventory.hint>0)inventory.hint--;
+  else if(save.coins>=10){save.coins-=10;persist();updateCoins();}
+  else{toast("Need 10 coins 💰");return;}
+  sessionUsedAssist=true;
+  const min=DIFFICULTY[diff].minLen,cands=[];
+  for(const w of dictArr){if(w.length>=min&&w.includes(currentCombo)&&!usedWords.has(w)){cands.push(w);if(cands.length>50)break;}}
+  if(!cands.length){toast("No words found 😱");return;}
+  const pick=cands[Math.floor(Math.random()*cands.length)];
+  msg(`💡 ${pick.slice(0,2)}${"·".repeat(pick.length-2)} (${pick.length} letters)`,"info");
+  updateInvBtns();
+}
+function useSkip(){
+  if(!gameActive)return;
+  if(inventory.skip>0)inventory.skip--;
+  else if(save.coins>=15){save.coins-=15;persist();updateCoins();}
+  else{toast("Need 15 coins 💰");return;}
+  sessionUsedAssist=true;toast("⏭ Skipped!");sfx.tick();clearInterval(interval);startRound();updateInvBtns();
+}
+function useFreeze(){
+  if(!gameActive||frozen)return;
+  if(inventory.freeze>0)inventory.freeze--;
+  else if(save.coins>=20){save.coins-=20;persist();updateCoins();}
+  else{toast("Need 20 coins 💰");return;}
+  frozen=true;timerOuter.classList.add("frozen");toast("❄️ Frozen for 4s!");sfx.tick();
+  setTimeout(()=>{frozen=false;timerOuter.classList.remove("frozen");},4000);updateInvBtns();
+}
+function useBomb(){
+  if(!gameActive)return;
+  if(inventory.bomb>0)inventory.bomb--;
+  else if(save.coins>=30){save.coins-=30;persist();updateCoins();}
+  else{toast("Need 30 coins 💰");return;}
+  sessionUsedAssist=true;
+  // Give extra life, clear timer, pick new combo
+  lives=Math.min(lives+1,99);updateHearts();updateVsHP();
+  toast("💣 KABOOM! +1 life + new combo!");sfx.boom();spawnConfetti(10);
+  clearInterval(interval);startRound();updateInvBtns();
+}
+
+/* ─────────────────────────────────────────────
+   SHOP
+───────────────────────────────────────────── */
+function renderShop(){
+  save.upgrades=save.upgrades||{};shopGridEl.innerHTML="";
+  for(const it of SHOP_ITEMS){
+    const owned=save.upgrades[it.id]||0,isMax=owned>=it.max;
+    const el=document.createElement("div");el.className="shop-item"+(isMax?" maxed":"");
+    const isConsumable=["hint","skip","freeze","bomb","life"].includes(it.id);
+    el.innerHTML=`<div class="shop-ic">${it.ic}</div><div class="shop-nm">${it.nm}</div><div class="shop-desc">${it.desc}</div><div class="shop-cost">💰 ${it.cost}c</div><div class="shop-owned ${isMax?"full":""}">${isConsumable?`×${owned} owned`:`${owned}/${it.max}`}${isMax?" (MAX)":""}</div>`;
+    if(!isMax)el.onclick=()=>buyItem(it);
+    shopGridEl.appendChild(el);
+  }
+  updateCoins();
+}
+function buyItem(it){
+  const owned=save.upgrades[it.id]||0;if(owned>=it.max){toast("Already maxed!");return;}
+  if(save.coins<it.cost){toast("Not enough coins 💰");return;}
+  save.coins-=it.cost;save.upgrades[it.id]=owned+1;
+  if(it.id==="hint")inventory.hint+=5;if(it.id==="skip")inventory.skip+=5;
+  if(it.id==="freeze")inventory.freeze+=3;if(it.id==="bomb")inventory.bomb+=2;
+  persist();updateCoins();renderShop();updateInvBtns();updateMultiplier();
+  toast(`Bought ${it.nm}! ${it.ic}`);sfx.coin();
+}
+
+/* ─────────────────────────────────────────────
+   USED WORDS / STATS
+───────────────────────────────────────────── */
+function renderUsed(){
+  const arr=[...usedWords].slice(-120).reverse();
+  tabUsed.innerHTML=arr.map(w=>`<span class="word-chip${w.length>=10?" mega":w.length>=6?" long":""}${/[qzxj]/.test(w)?" rare":""}">${w}</span>`).join("");
+}
+function renderStats(){
+  const modeRows=Object.entries(save.bestByMode||{}).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([k,v])=>`<div class="stat-line"><span>🏆 ${k}</span><b>${v.toLocaleString()}</b></div>`).join("");
+  tabStats.innerHTML=`
+    <div class="stat-line"><span>Games played</span><b>${save.gamesPlayed||0}</b></div>
+    <div class="stat-line"><span>Total words</span><b>${(save.totalWords||0).toLocaleString()}</b></div>
+    <div class="stat-line"><span>Longest word</span><b>${save.longestWord||"—"}</b></div>
+    <div class="stat-line"><span>Best score</span><b>${(save.best||0).toLocaleString()}</b></div>
+    <div class="stat-line"><span>Best long streak</span><b>${save.bestLongStreak||0}</b></div>
+    <div class="stat-line"><span>Rare letters used</span><b>${save.rareLetterUses||0}</b></div>
+    <div class="stat-line"><span>Login streak</span><b>${save.loginStreak||0} days</b></div>
+    <div class="stat-line"><span>Achievements</span><b>${Object.keys(save.achievements||{}).length}/${ACHIEVEMENTS.length}</b></div>
+    <div class="stat-line"><span>Skins owned</span><b>${(save.skins||["default"]).length}/${SKINS.length}</b></div>
+    <div class="stat-line"><span>Dictionary</span><b>${dictionary.size.toLocaleString()} words</b></div>
+    ${modeRows?`<div style="margin:8px 0 3px;color:var(--text3);font-size:.7rem;text-transform:uppercase;letter-spacing:1px">Best by mode</div>${modeRows}`:""}
+  `;
+}
+const tabAch=$("tabAch"),tabCalendar=$("tabCalendar"),tabMissed=$("tabMissed"),tabUsed=$("tabUsed"),tabStats=$("tabStats");
+
+/* ─────────────────────────────────────────────
+   START GAME
+───────────────────────────────────────────── */
+function startGame(){
+  if(!dictLoaded){msg("Dictionary not loaded yet!","info");return;}
+  diff=$("difficulty").value;mode=$("modeSelect").value;
+  if(mode==="daily"){dailyRng=mulberry32(seedFromStr(todayKey()+":"+diff));toast(`📅 Daily ${todayKey()}`);}
+  updateDiffRow();stopAI();
+  const extraLives=save.upgrades.life||0;
+  lives=mode==="sudden"?1:Number($("lifeSelect").value)+extraLives;
+  aiLives=lives;aiScore=0;
+  usedWords.clear();renderUsed();
+  longStreak=0;round=0;score=0;chainCount=0;chainLetter="";
+  sessionWords=0;sessionCoinsEarned=0;sessionBestStreak=0;
+  sessionUsedAssist=false;pendingTimeBonus=0;sessionRareCount=0;
+  sessionLettersUsed.clear();lettersUsed.clear();updateAlphabet();
+  streakEl.textContent="0";
+  const skin=SKINS.find(s=>s.id===(save.equippedSkin||"default"))||SKINS[0];
+  charEl.textContent=skin.em;
+  gameOverOverlay.classList.remove("show");
+  updateMultiplier();updateFire();updateHearts();updateScore();updateChain();updateBonusMeter(0);
+  prevLevel=getLevel(save.totalWords);
+  gameActive=true;
+  const modeMsg={classic:"Let's go! 💥",zen:"🧘 Zen — no penalties",sudden:"☠️ ONE LIFE! GOOD LUCK!",chain:"🔗 Chain mode! Last letter → first letter",blitz:"⚡ BLITZ! Fast and furious!",survival:"🫀 HP drains every 8 rounds!",vs_ai:"🤖 YOU vs AI! GO!",daily:"📅 Daily challenge!"};
+  msg(modeMsg[mode]||"Go!","good");
+  updateInvBtns();
+  if(mode==="vs_ai"){vsWrap.style.display="block";updateVsHP();startAI();}
+  else vsWrap.style.display="none";
+  startRound();
+}
+
+/* ─────────────────────────────────────────────
+   EVENTS
+───────────────────────────────────────────── */
+inputEl.addEventListener("keydown",e=>{if(e.key==="Enter")submitWord();});
+inputEl.addEventListener("input",e=>{const w=e.target.value.trim().toLowerCase();updateBonusMeter(w.length);});
+$("startBtn").onclick=startGame;
+$("goPlayAgain").onclick=startGame;
+$("goClose").onclick=()=>gameOverOverlay.classList.remove("show");
+$("goSaveScore").onclick=()=>{
+  const name=$("lbNameInput").value.trim()||"Anonymous";
+  const modeLabel=`${DIFFICULTY[diff].label}·${mode}`;
+  saveToLeaderboard(name,score,modeLabel);
+  toast("💾 Score saved to leaderboard!");
+  $("goSaveScore").disabled=true;$("goSaveScore").textContent="✓ Saved";
+  // Show leaderboard tab
+  document.querySelectorAll(".tab-btn").forEach(b=>b.dataset.tab2&&(b.classList.toggle("active",b.dataset.tab2==="lb")));
+  tab2Skins.style.display="none";tab2Lb.style.display="block";
+};
+$("resetBtn").onclick=()=>{
+  if(!confirm("Reset ALL progress? This cannot be undone."))return;
+  save={coins:0,best:0,totalWords:0,gamesPlayed:0,longestWord:"",upgrades:{},muted,achievements:{},dailyBest:{},bestByMode:{},skins:["default"],equippedSkin:"default",loginStreak:0,lastLoginDate:"",rareLetterUses:0,bestLongStreak:0,zenWords:0,survivalBest:0,blitzBest:0,leaderboard:[],playHistory:{}};
+  persist();inventory={hint:0,skip:0,freeze:0,bomb:0};
+  updateCoins();updateBest();renderShop();updateInvBtns();renderStats();renderAchievements();updateLevel();renderSkins();renderLeaderboard();updateDailyStreakBadge();
+  toast("Save reset.");
+};
+hintBtn.onclick=useHint;skipBtn.onclick=useSkip;freezeBtn.onclick=useFreeze;bombBtn.onclick=useBomb;
+muteBtn.onclick=()=>{muted=!muted;persist();muteBtn.textContent=muted?"🔇":"🔊";};
+charEl.onclick=()=>{
+  // Quick skin cycle on click
+  document.querySelectorAll("#tabs2 .tab-btn").forEach(b=>b.classList.toggle("active",b.dataset.tab2==="skins"));
+  tab2Skins.style.display="block";tab2Lb.style.display="none";
+};
+
+// Tabs (left panel)
+document.querySelectorAll("#tabs .tab-btn").forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll("#tabs .tab-btn").forEach(x=>x.classList.remove("active"));b.classList.add("active");
+    const t=b.dataset.tab;
+    tabUsed.style.display=t==="used"?"block":"none";
+    tabStats.style.display=t==="stats"?"block":"none";
+    tabAch.style.display=t==="ach"?"block":"none";
+    tabCalendar.style.display=t==="calendar"?"block":"none";
+    tabMissed.style.display=t==="missed"?"block":"none";
+    if(t==="stats")renderStats();if(t==="ach")renderAchievements();
+    if(t==="calendar")renderCalendar();
+  };
+});
+// Tabs (right panel)
+document.querySelectorAll("#tabs2 .tab-btn").forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll("#tabs2 .tab-btn").forEach(x=>x.classList.remove("active"));b.classList.add("active");
+    const t=b.dataset.tab2;
+    tab2Skins.style.display=t==="skins"?"block":"none";
+    tab2Lb.style.display=t==="lb"?"block":"none";
+  };
+});
+
+// Keyboard shortcuts
+document.addEventListener("keydown",e=>{
+  if(e.target===inputEl)return;
+  if(e.key==="h")useHint();
+  if(e.key==="f")useFreeze();
+  if(e.key==="b")useBomb();
+  if(e.key==="s"&&e.ctrlKey){e.preventDefault();useSkip();}
+  if(e.key==="Enter"&&!gameActive)startGame();
+});
+$("modeSelect").addEventListener("change",()=>{mode=$("modeSelect").value;updateDiffRow();updateChain();});
+$("difficulty").addEventListener("change",()=>updateDiffRow());
+$("uploadDictBtn").onclick=()=>$("dictFile").click();
+$("dictFile").onchange=e=>handleDictUpload(e.target.files[0]);
+$("clearDictBtn").onclick=clearCachedDict;
+
+/* ─────────────────────────────────────────────
+   INIT
+───────────────────────────────────────────── */
+updateLoginStreak();
+updateCoins();updateBest();updateHearts();updateMultiplier();
+updateAlphabet();updateDiffRow();renderShop();renderStats();
+renderAchievements();updateLevel();updateChain();updateBonusMeter(0);
+updateDailyStreakBadge();renderSkins();renderLeaderboard();renderCalendar();
+muteBtn.textContent=muted?"🔇":"🔊";
+// Apply equipped skin
+const initSkin=SKINS.find(s=>s.id===(save.equippedSkin||"default"))||SKINS[0];
+charEl.textContent=initSkin.em;
+loadDictionary();
+</script>
+</body>
+</html>
